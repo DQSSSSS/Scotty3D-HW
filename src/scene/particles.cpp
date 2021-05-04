@@ -121,28 +121,31 @@ void Scene_Particles::step(const PT::BVH<PT::Object>& scene, float dt) {
 
     float cos = std::cos(Radians(opt.angle) / 2.0f);
 
-    double cooldown = 1.0 / opt.pps;
-    while(particle_cooldown <= 0.0f) {
+    if(opt.pps > 0.0f) {
+        double cooldown = 1.0 / opt.pps;
+        while(particle_cooldown <= 0.0f) {
 
-        float z = lerp(cos, 1.0f, RNG::unit());
-        float t = 2 * PI_F * RNG::unit();
-        float r = std::sqrt(1 - z * z);
-        Vec3 dir = opt.velocity * Vec3(r * std::cos(t), z, r * std::sin(t));
+            float z = lerp(cos, 1.0f, RNG::unit());
+            float t = 2 * PI_F * RNG::unit();
+            float r = std::sqrt(1 - z * z);
+            Vec3 dir = opt.velocity * Vec3(r * std::cos(t), z, r * std::sin(t));
 
-        Particle p;
-        p.pos = pose.pos;
-        p.velocity = pose.rotation_mat().rotate(dir);
-        p.age = opt.lifetime;
-        next.push_back(p);
+            Particle p;
+            p.pos = pose.pos;
+            p.velocity = pose.rotation_mat().rotate(dir);
+            p.age = opt.lifetime;
+            next.push_back(p);
 
-        Mat4 T = Mat4{Vec4{S, 0.0f, 0.0f, 0.0f}, Vec4{0.0f, S, 0.0f, 0.0f},
-                      Vec4{0.0f, 0.0f, S, 0.0f}, Vec4{p.pos, 1.0f}};
-        particle_instances.add(T);
+            Mat4 T = Mat4{Vec4{S, 0.0f, 0.0f, 0.0f}, Vec4{0.0f, S, 0.0f, 0.0f},
+                        Vec4{0.0f, 0.0f, S, 0.0f}, Vec4{p.pos, 1.0f}};  
+            particle_instances.add(T);
 
-        particle_cooldown += cooldown;
+            particle_cooldown += cooldown;
+        }
+
+        particle_cooldown -= dt;
     }
 
-    particle_cooldown -= dt;
     particles = std::move(next);
 }
 
