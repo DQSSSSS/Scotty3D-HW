@@ -10,7 +10,9 @@ has_toc: false
 # (Task 7) Environment Lighting
 
 ### Walkthrough Video
-<iframe width="750" height="500" src="Task7_EnvMap.mp4" frameborder="0" allowfullscreen></iframe>
+<video width="750" height="500" controls>
+    <source src="Task7_EnvMap.mp4" type="video/mp4">
+</video>
 
 The final task of this assignment will be to implement a new type of light source: an infinite environment light. An environment light is a light that supplies incident radiance (really, the light intensity dPhi/dOmega) from all directions on the sphere. Rather than using a predefined collection of explicit lights, an environment light is a capture of the actual incoming light from some real-world scene; rendering using environment lighting can be quite striking.
 
@@ -66,12 +68,8 @@ ennis.exr with 32 spp
 
 uffiz.exr with 32 spp
 
-![uffiz](new_results/uffizi32importance.png)
-
-field.exr with 32 spp
-
-![ennis](new_results/field32importance.png)
+![uffiz](new_results/uffiz32importance.png)
 
 field.exr with 1024 spp
 
-![ennis](new_results/field1024imp.png)
+![ennis](new_results/field1024importance.png)

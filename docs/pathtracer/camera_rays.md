@@ -8,7 +8,9 @@ permalink: /pathtracer/camera_rays
 # (Task 1) Generating Camera Rays
 
 ### Walkthrough Video
-<iframe width="750" height="500" src="Task1_CameraRays.mp4" frameborder="0" allowfullscreen></iframe>
+<video width="750" height="500" controls>
+    <source src="Task1_CameraRays.mp4" type="video/mp4">
+</video>
 
 "Camera rays" emanate from the camera and measure the amount of scene radiance that reaches a point on the camera's sensor plane. (Given a point on the virtual sensor plane, there is a corresponding camera ray that is traced into the scene.) Your job is to generate these rays, which is the first step in the raytracing procedure.
 

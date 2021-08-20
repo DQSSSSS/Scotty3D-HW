@@ -20,7 +20,7 @@ However, if the particle can have arbitrary forces applied to it, we no longer k
 
 <center><img src="task4_media/fma.png"></center>
 
-There are many different techniques for integrating our equations of motion, including forward, backward, and symplectic Euler, Verlet, Runge-Kutta, and Leapfrog. Each strategy comes with a slightly different way of computing how much to update our velocity and position across a single time-step. In this task, we will use the simplest - forward Euler - as we aren't too concerned with stability or energy conservation for our particle system. Forward Euler simply steps our position forward by our velocity, and then velocity by our acceleration:
+There are many different techniques for integrating our equations of motion, including forward, backward, and symplectic Euler, Verlet, Runge-Kutta, and Leapfrog. Each strategy comes with a slightly different way of computing how much to update our velocity and position across a single time-step. In this case, we will use the simplest - forward Euler - as we aren't too concerned with stability or energy conservation. Forward Euler simply steps our position forward by our velocity, and then velocity by our acceleration:
 
 <center><img src="task4_media/euler.png"></center>
 
@@ -28,17 +28,30 @@ In `Particle::update`, use this integrator to step the current particle forward 
 
 ## Collisions
 
-The more substantial part of this task is colliding each particle with the rest of our scene geometry. Thankfully, you've already done most of the work required here during A3: we can use Scotty3D's ray-tracing capabilities to find collisions along our particles' paths. 
+The more substantial part of this task is colliding each particle with the rest of our scene geometry. Thankfully, you've already done most of the work required here for A3: we can use Scotty3D's ray-tracing capabilities to find collisions. 
 
-During each timestep, we know that in the absence of a collision, our particle will travel in the direction of velocity for distance `||velocity|| * dt`. We can create a ray representing this position and velocity to look for collisions during the time-step. If the ray intersects with the scene, we can compute when the particle would experience a collision. Note that since we are representing particles as small spheres, you must take `radius` into account when finding the collision point. If the path intersects a surface, at what distance does the closest point on the sphere start colliding? (Hint - it depends on the angle of intersection.) Also note that if a collision would occur after the end of the current timestep, it may be ignored.
+During each timestep, we know that in the absence of a collision, our particle will travel in the direction of velocity for distance `||velocity|| * dt`. Hence, we can create a ray from the particle's position and velocity to look for collisions during the time-step. If the ray intersects with the scene, we can compute exactly when the particle would experience a collision. 
 
-When we find a collision, we could just place the particle at the collision point and be done, but we don't want our particles to simply stick the surface! Instead, we will assume all particles collide elastically (and massless-ly) - that is, the magnitude of their velocity should be the same before and after the collision, and its direction should be reflected about the normal of the collision surface. 
+When collision is found, we could just place the particle at the collision point and be done, but we don't want our particles to simply stick the surface! Instead, we will assume all particles collide elastically (and massless-ly): the magnitude of a particle's velocity should be the same before and after a collision, but its direction should be reflected about the normal of the collided surface. 
 
-Finally, once we have a reflected velocity, we can compute how much of the time step remains after the collision, and step the particle forward that amount. However, what if the particle collided with the scene _again_ before the end of the time-step? If we are using very small time-steps, it might be OK to ignore this possibility, but we want to be able to resolve all collisions. So, we can repeat the ray-casting procedure in a loop until we have used up the entire time-step (up to some epsilon). Remember to only use the remaining portion of the time-step each iteration, and to step forward both the velocity and position at each sub-step.
+Once we have reflected velocity, we can compute how much of the time step remains after the collision. But what if the particle collided with the scene _again_ before the end of the time-step? If we are using very small time-steps, it might be acceptable to ignore this possibility, but we want to resolve all collisions. So, we can repeat the ray-casting procedure in a loop until we have used up the entire time-step, up to some epsilon. Remember to only use the remaining portion of the time-step each iteration, and to step forward both the velocity and position at each sub-step.
+
+### Spherical Particles
+
+The above procedure is perfectly realistic for point particles, but we would like to draw our particles with some non-zero size and still have the simulation appear natural. 
+
+We will hence represent particles as small spheres. This means you must take `radius` into account when finding intersections: if the collision ray intersects a surface, at what distance does the closest point on the sphere incur the collision? (Hint - it depends on the angle of intersection.)
+
+Simply finding closer intersections based on `radius` will not, of course, resolve all sphere-scene intersections: the ray can miss all geometry while the edge of the sphere would see a collision. However, this will produce visually acceptable results, greatly reducing overlap and never letting particles 'leak' through geometry. 
 
 <center><img src="task4_media/collision.png"></center>
 
 Once you have got collisions working, you should be able to open `particles.dae` and see a randomized collision-fueled waterfall. Try rendering the scene!
+
+Tips:
+- **Don't** use `abs()`. In GCC, this is the integer-only absolute value function. To get the float version, use `std::abs()` or `fabsf()`.
+- When accounting for radius, you don't know how far along the ray a collision might occur. Look for a collision at any distance, and if it occurs after the end of the current timestep, ignore it.
+- When accounting for radius, consider in what situation(s) you could find a collision at a negative time. In this case, you should not move the particle - just reflect the velocity. 
 
 ## Lifetime
 

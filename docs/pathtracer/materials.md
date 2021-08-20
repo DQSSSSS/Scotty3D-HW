@@ -9,10 +9,10 @@ has_toc: false
 
 # (Task 6) Materials
 
-
-
 ### Walkthrough Video
-<iframe width="750" height="500" src="Task6_Materials.mp4" frameborder="0" allowfullscreen></iframe>
+<video width="750" height="500" controls>
+    <source src="Task6_Materials.mp4" type="video/mp4">
+</video>
 
 Now that you have implemented the ability to sample more complex light paths, it's finally time to add support for more types of materials (other than the fully Lambertian material that you have implemented in Task 5). In this task you will add support for two types of materials: a perfect mirror and glass (a material featuring both specular reflection and transmittance) in `student/bsdf.cpp`.
 
@@ -32,11 +32,9 @@ There are also two helper functions in the BSDF class in `student/bsdf.cpp` that
 
 * `Vec3 refract(Vec3 out_dir, float index_of_refraction, bool& was_internal)` returns the ray that results from refracting the ray in `out_dir` about the surface according to [Snell's Law](http://15462.courses.cs.cmu.edu/fall2015/lecture/reflection/slide_032). The surface's index of refraction is given by the argument `index_of_refraction`. Your implementation should assume that if the ray in `out_dir` **is entering the surface** (that is, if `cos(out_dir, N=[0,1,0]) > 0`) then the ray is currently in vacuum (index of refraction = 1.0). If `cos(out_dir, N=[0,1,0]) < 0` then your code should assume the ray is leaving the surface and entering vacuum. Remember to **flip the sign of the x and z components** of the output ray direction from the refract method.
 
-* There is a special case to account for, specifically known as **total internal
-reflection**. This happens for certain angles when the incoming ray is in the material with the
-higher refractive index. These certain angles are angles that are greater than the _critical angle_, which is the incident angle \theta_i that causes the
-refracted angle \theta_t to be >= 90 degrees, which causes there to be no real solution to Snell's
-Law.
+* There is a special case to account for: **total internal reflection**. This happens for certain angles when the incoming ray is in the material with the
+higher refractive index. Angles that are greater than the _critical angle_, which is the incident \theta_i that causes the
+refracted \theta_t to be >= 90 degrees, cause there to be no real solution to Snell's Law.
 
 <center><img src="tir_eqns.png" width="200"></center>
 

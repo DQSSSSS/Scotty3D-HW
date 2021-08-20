@@ -8,7 +8,9 @@ parent: "A3: Pathtracer"
 # (Task 3) Bounding Volume Hierarchy
 
 ### Walkthrough Video
-<iframe width="750" height="500" src="Task3_BVH.mp4" frameborder="0" allowfullscreen></iframe>
+<video width="750" height="500" controls>
+    <source src="Task3_BVH.mp4" type="video/mp4">
+</video>
 
 
 In this task you will implement a bounding volume hierarchy that accelerates ray-scene intersection. Most of this work will be in `student/bvh.inl`. Note that this file has an unusual extension (`.inl` = inline) because it is an implementation file for a template class. This means `bvh.h` must `#include` it, so all code that sees `bvh.h` will also see `bvh.inl`.

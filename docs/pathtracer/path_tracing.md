@@ -8,7 +8,9 @@ parent: "A3: Pathtracer"
 # (Task 5) Path Tracing
 
 ### Walkthrough Video
-<iframe width="750" height="500" src="Task5_PathTracing.mp4" frameborder="0" allowfullscreen></iframe>
+<video width="750" height="500" controls>
+    <source src="Task5_PathTracing.mp4" type="video/mp4">
+</video>
 
 Up to this point, your renderer simulates light which begins at a source, bounces off a surface, and hits a camera. However, light can take much more complicated paths, bouncing off many surfaces before eventually reaching the camera. Simulating this multi-bounce light is referred to as _indirect illumination_, and it is critical to producing realistic images, especially when specular surfaces are present.
 
@@ -40,8 +42,6 @@ Note:
 
 * Functions in `student/sampler.cpp` from class `Sampler` contains helper functions for random sampling, which you will use for sampling. Our starter code uses uniform hemisphere sampling `Samplers::Hemisphere::Uniform  sampler`(see `rays/bsdf.h` and `student/sampler.cpp`) which is already implemented for you.
 
-* If you want to implement Cosine-Weighted Hemisphere sampling for extra credit, fill in `Hemisphere::Cosine::sample` in `student/samplers.cpp` and then in `rays/bsdf.h`change `Samplers::Hemisphere::Uniform sampler` to `Samplers::Hemisphere::Cosine sampler`.
-
 ---
 
 After correctly implementing path tracing, your renderer should be able to make a beautifully lit picture of the Cornell Box with Lambertian spheres (`cbox_lambertian.dae`). Below is a render using 1024 samples per pixel (spp):
@@ -56,10 +56,12 @@ Also note that if you have enabled Russian Roulette, your result may seem noisie
 
 ## Tips
 
-* The path termination probability should be computed based on the [overall throughput](http://15462.courses.cs.cmu.edu/fall2015/lecture/globalillum/slide_044) of the path. The throughput of the ray is recorded in its `throughput` member, which represents the multiplicative factor the current radiance will be affected by before contributing to the final pixel color. Hence, you should both use and update this field. To update it, simply multiply in the rendering equation factors: BSDF attenuation and `cos(theta)`. Remember to apply the coefficients from the current step before deriving the termination probability. Finally, note that the updated throughput should be copied to the recursive ray for later steps.
+* The path termination probability should be computed based on the [overall throughput](http://15462.courses.cs.cmu.edu/fall2015/lecture/globalillum/slide_044) of the path. The throughput of the ray is recorded in its `throughput` member, which represents the multiplicative factor the current radiance will be affected by before contributing to the final pixel color. Hence, you should both use and update this field. To update it, simply multiply in the rendering equation factors (BSDF attenuation and `cos(theta)`) and divide by the PDF. Remember to apply the coefficients from the current step before deriving the termination probability. Finally, note that the updated throughput should be copied to the recursive ray for later steps.
 
-* Keep in mind that delta function BSDFs can take on values greater than one, so clamping termination probabilities derived from BSDF values to 1 is wise.
+* Keep in mind that the throughput can take on values greater than one, so clamping termination probabilities derived from BSDF values to `[0,1]` is wise. Remember that PDF values are _not_ probabilities, so they should _not_ be clamped to 1.
 
 * To convert a Spectrum to a termination probability, we recommend you use the luminance (overall brightness) of the Spectrum, which is available via `Spectrum::luma`
 
 * We've given you some [pretty good notes](http://15462.courses.cs.cmu.edu/fall2015/lecture/globalillum/slide_047) on how to do this part of the assignment, but it can still be tricky to get correct.
+
+* **Don't** use `abs()`. In GCC, this is the integer-only absolute value function. To get the float version, use `std::abs()` or `fabsf()`.
