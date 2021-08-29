@@ -79,6 +79,7 @@ if we want our new distribution to still integrate to 1, we must divide by sin(\
 
 Altogether, the final Jacobian is (wh / 2pi^2 sin(\theta)).
 
+<<<<<<< HEAD
 ---
 
 ### Tips
@@ -91,9 +92,16 @@ Altogether, the final Jacobian is (wh / 2pi^2 sin(\theta)).
 - If you didn't use the ray log to debug area light sampling, start using it now to visualize what directions are being sampled from the environment map.
 
 ---
+=======
+![uffiz](new_results/uffiz32importance.png)
+>>>>>>> c0f8c29adcde9b20b76232cedf6298f12af43f03
 
 ## Reference Results
 
+<<<<<<< HEAD
 ![ennis](images/ennis.png)
 ![uffiz](images/uffiz.png)
 ![grace](images/grace.png)
+=======
+![ennis](new_results/field1024importance.png)
+>>>>>>> c0f8c29adcde9b20b76232cedf6298f12af43f03

@@ -25,10 +25,11 @@ To freely move the camera without updating its field of view/aspect ratio to mat
 
 ## Create light
 
-To create a lighting for your scene, simply go to the menu on the left side, click "New Light", and you will be able to choose from a variaty of light objects and environmental lights. (you will implement the support for environmental light in Task 7. See the corresponding documentation for more guide.)
+To add lighting to the scene, simply go to the menu on the left side, click "New Light", and you will be able to choose from a variety of point objects and infinite environment lights. (To implement support for environment lights, see PathTracer task 7.)
 
 ![light](light.png)
 
+Additionally, any object can be made into an emissive area light by changing its material to `Diffuse Light`. Mesh-based area lights can produce much more realistic lighting conditions.
 
 ## Enable Ray Logging for Debugging
 
