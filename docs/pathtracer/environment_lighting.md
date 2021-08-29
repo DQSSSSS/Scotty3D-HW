@@ -87,7 +87,7 @@ Altogether, the final Jacobian is (wh / 2pi^2 sin(\theta)).
 - When computing areas corresponding to a pixel, use the value of theta at the pixel centers.
 - Compute the PDF and CDF in the constructor of `Sampler::Sphere::Image`, storing them values in fields `_pdf` and `_cdf`. See `rays/sampler.h`.
 - `Spectrum::luma()` returns the luminance (brightness) of a Spectrum. The weight assigned to a pixel should be proportional both its luminance and the solid angle it subtends.
-- For inversion sampling, use `std::lower_bound`: it's a binary search. Read about it [here](https://en.cppreference.com/w/cpp/algorithm/lower_bound).
+- For inversion sampling, use `std::upper_bound`: it's a binary search. Read about it [here](https://en.cppreference.com/w/cpp/algorithm/upper_bound).
 - If you didn't use the ray log to debug area light sampling, start using it now to visualize what directions are being sampled from the environment map.
 
 ---
