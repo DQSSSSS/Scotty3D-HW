@@ -20,8 +20,8 @@ In order to correctly implement `hit` you need to understand some of the fields 
 * `point`: the 3D point of origin of the ray
 * `dir`: the 3D direction of the ray (always normalized)
 * `dist_bounds`: the minimum and maximum distance along the ray. Primitive intersections that lie outside the [`ray.dist_bounds.x`, `ray.dist_bounds.y`] range should be disregarded.
-* `depth`: the recursive depth of the ray (Used in task 5).
-* `throughput`: the fraction of incoming light along this ray that will contribute to the final image (Task 5).
+* `depth`: the recursive depth of the ray (Used in task 4).
+* `throughput`: the fraction of incoming light along this ray that will contribute to the final image (Optionally used in task 4).
 
 One important detail of the ray structure is that `dist_bounds` is a mutable field. This means that it can be modified even in `const` rays, for example within `Triangle::hit`. When finding the first intersection of a ray and the scene, you will want to update the ray's `dist_bounds` value after finding each hit with scene geometry. By bounding the ray as tightly as possible, your ray tracer will be able to avoid unnecessary tests with scene geometry that is known to not be able to result in a closest hit, resulting in higher performance.
 
