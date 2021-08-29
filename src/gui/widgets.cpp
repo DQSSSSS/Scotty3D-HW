@@ -10,6 +10,7 @@
 #include "manager.h"
 #include "widgets.h"
 
+#include "../app.h"
 #include "../geometry/util.h"
 #include "../platform/platform.h"
 #include "../scene/renderer.h"
@@ -157,7 +158,7 @@ void Widgets::render(const Mat4& view, Vec3 pos, float scl) {
         z_scl.pose.scale = scale;
         z_scl.pose.pos = pos + Vec3(0.0f, 0.0f, 0.15f * scl);
         z_scl.render(view, true);
-        
+
         xyz_scl.pose.scale = scale;
         xyz_scl.pose.pos = pos;
         xyz_scl.render(view, true);
@@ -186,11 +187,11 @@ Pose Widgets::apply_action(const Pose& pose) {
             result.scale = Vec3{1.0f};
             result.scale[(int)axis] = drag_end[(int)axis];
             Mat4 rot = pose.rotation_mat();
-            Mat4 trans = 
+            Mat4 trans =
                 Mat4::transpose(rot) * Mat4::scale(result.scale) * rot * Mat4::scale(pose.scale);
             result.scale = Vec3(trans[0][0], trans[1][1], trans[2][2]);
         }
-        
+
     } break;
     case Widget_Type::bevel: {
         Vec2 off = bevel_start - bevel_end;
@@ -240,7 +241,7 @@ bool Widgets::to_axis3(Vec3 obj_pos, Vec3 cam_pos, Vec3 dir, Vec3& hit) {
 
     Line select(cam_pos, dir);
     Line target(obj_pos, axis1);
-    
+
     Plane k(obj_pos, axis1);
     Plane l(obj_pos, axis2);
     Plane r(obj_pos, axis3);
@@ -300,7 +301,7 @@ void Widgets::start_drag(Vec3 pos, Vec3 cam, Vec2 spos, Vec3 dir) {
             good = to_plane(pos, cam, dir, norm, hit);
         else if(univ_scl)
             good = to_axis3(pos, cam, dir, hit);
-        else    
+        else
             good = to_axis(pos, cam, dir, hit);
 
         if(!good) return;
@@ -639,7 +640,6 @@ void Widget_Render::begin(Scene& scene, Widget_Camera& cam, Camera& user_cam) {
 
     if(method == 1) {
         ImGui::InputInt("Samples", &out_samples, 1, 100);
-        ImGui::InputInt("Area Light Samples", &out_area_samples, 1, 100);
         ImGui::InputInt("Max Ray Depth", &out_depth, 1, 32);
         ImGui::SliderFloat("Exposure", &exposure, 0.01f, 10.0f, "%.2f", 2.5f);
     } else {
@@ -650,7 +650,6 @@ void Widget_Render::begin(Scene& scene, Widget_Camera& cam, Camera& user_cam) {
     out_w = std::max(1, out_w);
     out_h = std::max(1, out_h);
     out_samples = std::max(1, out_samples);
-    out_area_samples = std::max(1, out_area_samples);
     out_depth = std::max(1, out_depth);
 
     if(ImGui::Button("Set Width via AR")) {
@@ -660,6 +659,8 @@ void Widget_Render::begin(Scene& scene, Widget_Camera& cam, Camera& user_cam) {
     if(ImGui::Button("Set AR via W/H")) {
         cam.ar(user_cam, (float)out_w / (float)out_h);
     }
+    ImGui::SameLine();
+    ImGui::Checkbox("Use BVH", &use_bvh);
 }
 
 std::string Widget_Render::step(Animate& animate, Scene& scene) {
@@ -676,9 +677,10 @@ std::string Widget_Render::step(Animate& animate, Scene& scene) {
         }
 
         Camera cam = animate.set_time(scene, (float)next_frame);
-        animate.step_sim(scene);
 
         if(method == 0) {
+
+            animate.step_sim(scene);
             std::vector<unsigned char> data;
 
             Renderer::get().save(scene, cam, out_w, out_h, out_samples);
@@ -726,6 +728,7 @@ std::string Widget_Render::step(Animate& animate, Scene& scene) {
                     return "Failed to write output!";
                 }
 
+                animate.step_sim(scene);
                 pathtracer.begin_render(scene, cam);
                 next_frame++;
             }
@@ -778,7 +781,7 @@ void Widget_Render::animate(Scene& scene, Widget_Camera& cam, Camera& user_cam, 
             if(method == 1) {
                 init = true;
                 ray_log.clear();
-                pathtracer.set_sizes(out_w, out_h, out_samples, out_area_samples, out_depth);
+                pathtracer.set_params(out_w, out_h, out_samples, out_depth, use_bvh);
             }
         }
     }
@@ -831,7 +834,7 @@ bool Widget_Render::UI(Scene& scene, Widget_Camera& cam, Camera& user_cam, std::
                 has_rendered = true;
                 ret = true;
                 ray_log.clear();
-                pathtracer.set_sizes(out_w, out_h, out_samples, out_area_samples, out_depth);
+                pathtracer.set_params(out_w, out_h, out_samples, out_depth, use_bvh);
                 pathtracer.begin_render(scene, cam.get());
             } else {
                 Renderer::get().save(scene, cam.get(), out_w, out_h, out_samples);
@@ -871,6 +874,7 @@ bool Widget_Render::UI(Scene& scene, Widget_Camera& cam, Camera& user_cam, std::
     if(method == 1 && has_rendered) {
         ImGui::SameLine();
         if(ImGui::Button("Add Samples")) {
+            pathtracer.set_samples((int)out_samples);
             pathtracer.begin_render(scene, cam.get(), true);
         }
     }
@@ -897,21 +901,20 @@ bool Widget_Render::UI(Scene& scene, Widget_Camera& cam, Camera& user_cam, std::
 }
 
 std::string Widget_Render::headless(Animate& animate, Scene& scene, const Camera& cam,
-                                    std::string output, bool a, int w, int h, int s, int ls, int d,
-                                    float exp) {
+                                    const Launch_Settings& set) {
 
     info("Render settings:");
-    info("\twidth: %d", w);
-    info("\theight: %d", h);
-    info("\tsamples: %d", s);
-    info("\tlight samples: %d", ls);
-    info("\tmax depth: %d", d);
-    info("\texposure: %f", exp);
+    info("\twidth: %d", set.w);
+    info("\theight: %d", set.h);
+    info("\tsamples: %d", set.s);
+    info("\tmax depth: %d", set.d);
+    info("\texposure: %f", set.exp);
     info("\trender threads: %u", std::thread::hardware_concurrency());
+    if(set.no_bvh) info("\tusing object list instead of BVH");
 
-    out_w = w;
-    out_h = h;
-    pathtracer.set_sizes(w, h, s, ls, d);
+    out_w = set.w;
+    out_h = set.h;
+    pathtracer.set_params(set.w, set.h, set.s, set.d, !set.no_bvh);
 
     auto print_progress = [](float f) {
         std::cout << "Progress: [";
@@ -931,14 +934,14 @@ std::string Widget_Render::headless(Animate& animate, Scene& scene, const Camera
     };
 
     std::cout << std::fixed << std::setw(2) << std::setprecision(2) << std::setfill('0');
-    if(a) {
+    if(set.animate) {
 
         method = 1;
         init = true;
         animating = true;
         max_frame = animate.n_frames();
         next_frame = 0;
-        folder = output;
+        folder = set.output_file;
         while(next_frame < max_frame) {
             std::string err = step(animate, scene);
             if(!err.empty()) return err;
@@ -957,8 +960,8 @@ std::string Widget_Render::headless(Animate& animate, Scene& scene, const Camera
         std::cout << std::endl;
 
         std::vector<unsigned char> data;
-        pathtracer.get_output().tonemap_to(data, exp);
-        if(!stbi_write_png(output.c_str(), w, h, 4, data.data(), w * 4)) {
+        pathtracer.get_output().tonemap_to(data, set.exp);
+        if(!stbi_write_png(set.output_file.c_str(), set.w, set.h, 4, data.data(), set.w * 4)) {
             return "Failed to write output!";
         }
     }

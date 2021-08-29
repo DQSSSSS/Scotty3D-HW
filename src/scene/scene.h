@@ -24,11 +24,12 @@ class Animate;
 class Scene_Item {
 public:
     Scene_Item() = default;
-    Scene_Item(Scene_Object&& obj);
-    Scene_Item(Scene_Light&& light);
-    Scene_Item(Scene_Particles&& particles);
 
-    Scene_Item(Scene_Item&& src);
+    template<typename T> Scene_Item(T&& obj) : data(std::forward<T&&>(obj)) {
+    }
+
+    Scene_Item(Scene_Item&& src) : data(std::move(src.data)) {
+    }
     Scene_Item(const Scene_Item& src) = delete;
 
     Scene_Item& operator=(Scene_Item&& src);
@@ -43,6 +44,7 @@ public:
     Anim_Pose& animation();
     const Anim_Pose& animation() const;
     void set_time(float time);
+    void step(const PT::Object& scene, float dt);
 
     std::string name() const;
     std::pair<char*, int> name();
@@ -85,9 +87,13 @@ public:
 
     bool empty();
     size_t size();
-    Scene_ID add(Scene_Object&& obj);
-    Scene_ID add(Scene_Light&& obj);
-    Scene_ID add(Scene_Particles&& obj);
+
+    template<typename T> Scene_ID add(T&& obj) {
+        assert(objs.find(obj.id()) == objs.end());
+        objs.emplace(std::make_pair(obj.id(), std::move(obj)));
+        return obj.id();
+    }
+
     Scene_ID add(Pose pose, GL::Mesh&& mesh, std::string n = {}, Scene_ID id = 0);
     Scene_ID add(Pose pose, Halfedge_Mesh&& mesh, std::string n = {}, Scene_ID id = 0);
     Scene_ID reserve_id();
@@ -100,14 +106,19 @@ public:
     void for_items(std::function<void(const Scene_Item&)> func) const;
 
     Scene_Maybe get(Scene_ID id);
-    Scene_Object& get_obj(Scene_ID id);
-    Scene_Light& get_light(Scene_ID id);
-    Scene_Particles& get_particles(Scene_ID id);
+
+    template<typename T> T& get(Scene_ID id) {
+        auto entry = objs.find(id);
+        assert(entry != objs.end());
+        assert(entry->second.is<T>());
+        return entry->second.get<T>();
+    }
+
     std::string set_env_map(std::string file);
 
     bool has_env_light() const;
     bool has_obj() const;
-    bool has_particles() const;
+    bool has_sim() const;
 
 private:
     struct Stats {

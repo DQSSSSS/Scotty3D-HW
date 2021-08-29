@@ -44,6 +44,7 @@ public:
     void timeline(Manager& manager, Undo& undo, Scene& scene, Scene_Maybe obj, Camera& user_cam);
     void UIsidebar(Manager& manager, Undo& undo, Scene_Maybe obj_opt, Camera& user_cam);
 
+    bool playing_or_rendering();
     void clear();
     void update(Scene& scene);
     void refresh(Scene& scene);

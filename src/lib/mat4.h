@@ -165,15 +165,18 @@ struct Mat4 {
         bool single = true;
         static const float singularity[] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f,
                                             0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0};
-        for(int i = 0; i < 12 && single; i++) {
-            single = single && std::abs(data[i] - singularity[i]) < 16.0f * FLT_EPSILON;
+
+        for(int i = 0; i < 3 && single; i++) {
+            for(int j = 0; j < 4 && single; j++) {
+                single = single && std::abs(cols[i][j] - singularity[i * 4 + j]) < EPS_F;
+            }
         }
         if(single) return Vec3{0.0f, 0.0f, 180.0f};
 
         Vec3 eul1, eul2;
 
         float cy = std::hypotf(cols[0][0], cols[0][1]);
-        if(cy > 16.0f * FLT_EPSILON) {
+        if(cy > EPS_F) {
             eul1[0] = std::atan2(cols[1][2], cols[2][2]);
             eul1[1] = std::atan2(-cols[0][2], cy);
             eul1[2] = std::atan2(cols[0][1], cols[0][0]);

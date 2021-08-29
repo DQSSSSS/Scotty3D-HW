@@ -10,7 +10,7 @@ Scene_Particles::Scene_Particles(Scene_ID id)
     : arrow(Util::arrow_mesh(0.03f, 0.075f, 1.0f)), particle_instances(Util::sphere_mesh(1.0f, 1)) {
 
     _id = id;
-    snprintf(opt.name, max_name_len, "Emitter %d", id);
+    snprintf(opt.name, MAX_NAME_LEN, "Emitter %d", id);
     get_r();
 }
 
@@ -18,7 +18,7 @@ Scene_Particles::Scene_Particles(Scene_ID id, GL::Mesh&& mesh)
     : arrow(Util::arrow_mesh(0.03f, 0.075f, 1.0f)), particle_instances(std::move(mesh)) {
 
     _id = id;
-    snprintf(opt.name, max_name_len, "Emitter %d", id);
+    snprintf(opt.name, MAX_NAME_LEN, "Emitter %d", id);
     get_r();
 }
 
@@ -27,7 +27,7 @@ Scene_Particles::Scene_Particles(Scene_ID id, Pose p, std::string name)
 
     _id = id;
     pose = p;
-    snprintf(opt.name, max_name_len, "%s", name.c_str());
+    snprintf(opt.name, MAX_NAME_LEN, "%s", name.c_str());
     get_r();
 }
 
@@ -87,38 +87,57 @@ void Scene_Particles::clear() {
 void Scene_Particles::set_time(float time) {
     if(panim.splines.any()) {
         panim.at(time, opt);
+        if(!opt.enabled) clear();
     }
     if(anim.splines.any()) {
         pose = anim.at(time);
     }
 }
 
-const std::vector<Particle>& Scene_Particles::get_particles() const {
+const std::vector<Scene_Particles::Particle>& Scene_Particles::get_particles() const {
     return particles;
 }
 
-void Scene_Particles::step(const PT::BVH<PT::Object>& scene, float dt) {
+void Scene_Particles::step(const PT::Object& scene, float dt) {
 
     if(!opt.enabled) {
         clear();
         return;
     }
-    float S = opt.scale;
+    if(opt.dt < EPS_F) return;
+
+    last_update += dt;
+
+    while(last_update > opt.dt) {
+        step2(scene, opt.dt);
+        last_update -= opt.dt;
+    }
+
+    gen_instances();
+}
+
+void Scene_Particles::gen_instances() {
+    particle_instances.clear(particles.size());
+
+    for(Particle& p : particles) {
+        Mat4 T = Mat4{Vec4{opt.scale, 0.0f, 0.0f, 0.0f}, Vec4{0.0f, opt.scale, 0.0f, 0.0f},
+                      Vec4{0.0f, 0.0f, opt.scale, 0.0f}, Vec4{p.pos, 1.0f}};
+        particle_instances.add(T);
+    }
+}
+
+void Scene_Particles::step2(const PT::Object& scene, float dt) {
 
     std::vector<Particle> next;
     next.reserve(particles.size());
-    particle_instances.clear(particles.size());
 
-    for(size_t i = 0; i < particles.size(); i++) {
-        Particle& p = particles[i];
-        if(p.update(scene, dt, radius * S)) {
-            Mat4 T = Mat4{Vec4{S, 0.0f, 0.0f, 0.0f}, Vec4{0.0f, S, 0.0f, 0.0f},
-                          Vec4{0.0f, 0.0f, S, 0.0f}, Vec4{p.pos, 1.0f}};
-            particle_instances.add(T);
+    for(Particle& p : particles) {
+        if(p.update(scene, dt, radius * opt.scale)) {
             next.emplace_back(p);
         }
     }
 
+    particle_cooldown -= dt;
     float cos = std::cos(Radians(opt.angle) / 2.0f);
 
     if(opt.pps > 0.0f) {
@@ -136,16 +155,9 @@ void Scene_Particles::step(const PT::BVH<PT::Object>& scene, float dt) {
             p.age = opt.lifetime;
             next.push_back(p);
 
-            Mat4 T = Mat4{Vec4{S, 0.0f, 0.0f, 0.0f}, Vec4{0.0f, S, 0.0f, 0.0f},
-                        Vec4{0.0f, 0.0f, S, 0.0f}, Vec4{p.pos, 1.0f}};  
-            particle_instances.add(T);
-
             particle_cooldown += cooldown;
         }
-
-        particle_cooldown -= dt;
     }
-
     particles = std::move(next);
 }
 
@@ -167,5 +179,5 @@ void Scene_Particles::Anim_Particles::set(float t, Scene_Particles::Options o) {
 bool operator!=(const Scene_Particles::Options& l, const Scene_Particles::Options& r) {
     return l.color != r.color || l.velocity != r.velocity || l.angle != r.angle ||
            l.scale != r.scale || l.lifetime != r.lifetime || l.pps != r.pps ||
-           l.enabled != r.enabled;
+           l.enabled != r.enabled || l.dt != r.dt;
 }

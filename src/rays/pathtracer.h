@@ -26,7 +26,8 @@ public:
     Pathtracer(Gui::Widget_Render& gui, Vec2 screen_dim);
     ~Pathtracer();
 
-    void set_sizes(size_t w, size_t h, size_t pixel_samples, size_t area_samples, size_t depth);
+    void set_params(size_t w, size_t h, size_t pixel_samples, size_t depth, bool use_bvh);
+    void set_samples(size_t samples);
 
     const HDR_Image& get_output();
     const GL::Tex2D& get_output_texture(float exposure);
@@ -39,9 +40,15 @@ public:
     std::pair<float, float> completion_time() const;
 
 private:
-    // Internal
+    struct Shading_Info {
+        const BSDF& bsdf;
+        Mat4 world_to_object, object_to_world;
+        Vec3 pos, out_dir, normal;
+        size_t depth = 0;
+    };
+
     void build_scene(Scene& scene);
-    void build_lights(Scene& scene, std::vector<Object>& objs);
+    void build_lights(Scene& scene);
     void do_trace(size_t samples);
     void accumulate(const HDR_Image& sample);
     bool tonemap();
@@ -56,19 +63,27 @@ private:
     size_t total_epochs, accumulator_samples;
     std::atomic<size_t> completed_epochs;
 
-    /// Relevant to student
     Spectrum trace_pixel(size_t x, size_t y);
-    Spectrum trace_ray(const Ray& ray);
+    Spectrum sample_direct_lighting(const Shading_Info& hit);
+    Spectrum sample_indirect_lighting(const Shading_Info& hit);
+
+    std::pair<Spectrum, Spectrum> trace(const Ray& ray);
+    Spectrum point_lighting(const Shading_Info& hit);
+    Vec3 sample_area_lights(Vec3 from);
+    float area_lights_pdf(Vec3 from, Vec3 dir);
+
     void log_ray(const Ray& ray, float t, Spectrum color = Spectrum{1.0f});
 
-    BVH<Object> scene;
-    std::vector<Light> lights;
+    Object scene;
+    List<Object> area_lights;
+    bool scene_use_bvh = true;
+
     std::vector<BSDF> materials;
-    std::optional<Env_Light> env_light; // only one of these per scene
-    std::unordered_map<Scene_ID, size_t> mat_cache;
+    std::vector<Delta_Light> point_lights;
+    std::optional<Env_Light> env_light;
 
     Camera camera;
-    size_t out_w, out_h, n_samples, n_area_samples, max_depth;
+    size_t out_w, out_h, n_samples, max_depth;
 };
 
 } // namespace PT

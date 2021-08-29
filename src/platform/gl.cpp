@@ -152,8 +152,8 @@ void Tex2D::image(int w, int h, unsigned char* img) {
     if(!id) glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -1305,7 +1305,7 @@ void main() {
 	vec3 pos = normalize(f_pos);
 	if(pos.y > cosine) {
 		if(use_texture) {
-			float theta = atan(pos.z,pos.x) / TAU + 0.5f;
+			float theta = atan(pos.z,pos.x) / TAU;
 			float phi = acos(pos.y) / PI;
 			out_col = texture(tex, vec2(theta,phi));
 		} else {

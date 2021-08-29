@@ -8,127 +8,135 @@ namespace PT {
 
 Spectrum Pathtracer::trace_pixel(size_t x, size_t y) {
 
+    // TODO (PathTracer): Task 1
+
+    // Generate a ray that uniformly samples pixel (x,y) and return the incoming light.
+    // The following code generates a ray at the bottom left of the pixel every time.
+
+    // Tip: Samplers::Rect::Uniform
+    // Tip: log_ray is useful for debugging
+
     Vec2 xy((float)x, (float)y);
     Vec2 wh((float)out_w, (float)out_h);
 
-    // TODO (PathTracer): Task 1
+    Ray ray = camera.generate_ray(xy / wh);
+    ray.depth = max_depth;
 
-    // Generate a sample within the pixel with coordinates xy and return the
-    // incoming light using trace_ray.
-
-    // Tip: Samplers::Rect::Uniform
-    // Tip: you may want to use log_ray for debugging
-
-    // This currently generates a ray at the bottom left of the pixel every time.
-
-    Ray out = camera.generate_ray(xy / wh);
-    return trace_ray(out);
+    // Pathtracer::trace() returns the incoming light split into emissive and reflected components.
+    auto [emissive, reflected] = trace(ray);
+    return emissive + reflected;
 }
 
-Spectrum Pathtracer::trace_ray(const Ray& ray) {
+Spectrum Pathtracer::sample_indirect_lighting(const Shading_Info& hit) {
 
-    // Trace ray into scene. If nothing is hit, sample the environment
-    Trace hit = scene.hit(ray);
-    if(!hit.hit) {
+    // TODO (PathTrace): Task 4
+
+    // This function computes a single-sample Monte Carlo estimate of the _indirect_
+    // lighting at our ray intersection point.
+
+    // (1) Randomly sample a new ray direction from the BSDF distribution using BSDF::scatter().
+
+    // (2) Create a new world-space ray and call Pathtracer::trace() to get incoming light. You
+    // should modify time_bounds so that the ray does not intersect at time = 0. Remember to
+    // set the new depth value.
+
+    // (3) Add contribution due to incoming light scaled by BSDF attenuation. Whether you
+    // compute the BSDF scattering PDF should depend on if the BSDF is a discrete distribution
+    // (see BSDF::is_discrete()).
+
+    // You should only use the indirect component of incoming light (the second value returned
+    // by Pathtracer::trace()), as the direct component will be computed in
+    // Pathtracer::sample_direct_lighting().
+
+    Spectrum radiance;
+    return radiance;
+}
+
+Spectrum Pathtracer::sample_direct_lighting(const Shading_Info& hit) {
+
+    // This function computes a Monte Carlo estimate of the _direct_ lighting at our ray
+    // intersection point by sampling both the BSDF and area lights.
+
+    // Point lights are handled separately, as they cannot be intersected by tracing rays
+    // into the scene.
+    Spectrum radiance = point_lighting(hit);
+
+    // TODO (PathTrace): Task 4
+
+    // For task 4, this function should perform almost the same sampling procedure as
+    // Pathtracer::sample_indirect_lighting(), but instead accumulates the emissive component of
+    // incoming light (the first value returned by Pathtracer::trace()). Note that since we only
+    // want emissive, we can trace a ray with depth = 0.
+
+    // TODO (PathTrace): Task 6
+
+    // For task 6, we want to upgrade our direct light sampling procedure to also
+    // sample area lights using mixture sampling.
+
+    // (1) If the BSDF is discrete, we don't need to bother sampling lights: the behavior
+    // should be the same as task 4.
+
+    // (2) Otherwise, we should randomly choose whether we get our sample from `BSDF::scatter`
+    // or `Pathtracer::sample_area_lights`. Note that `Pathtracer::sample_area_lights` returns
+    // a world-space direction pointing toward an area light. Choose between the strategies 
+    // with equal probability.
+
+    // (3) Create a new world-space ray and call Pathtracer::trace() to get incoming light. You
+    // should modify time_bounds so that the ray does not intersect at time = 0. We are again
+    // only interested in the emissive component, so the ray depth can be zero.
+
+    // (4) Add estimate of incoming light scaled by BSDF attenuation. Given a sample,
+    // we don't know whether it came from the BSDF or the light, so you should use BSDF::evaluate(),
+    // BSDF::pdf(), and Pathtracer::area_lights_pdf() to compute the proper weighting.
+    // What is the PDF of our sample, given it could have been produced from either source?
+
+    return radiance;
+}
+
+std::pair<Spectrum, Spectrum> Pathtracer::trace(const Ray& ray) {
+
+    // This function orchestrates the path tracing process. For convenience, it
+    // returns the incoming light along a ray in two components: emitted from the
+    // surface the ray hits, and reflected through that point from other sources.
+
+    // Trace ray into scene.
+    Trace result = scene.hit(ray);
+    if(!result.hit) {
+
+        // If no surfaces were hit, sample the environemnt map.
         if(env_light.has_value()) {
-            return env_light.value().sample_direction(ray.dir);
+            return {env_light.value().evaluate(ray.dir), {}};
         }
         return {};
     }
 
     // If we're using a two-sided material, treat back-faces the same as front-faces
-    const BSDF& bsdf = materials[hit.material];
-    if(!bsdf.is_sided() && dot(hit.normal, ray.dir) > 0.0f) {
-        hit.normal = -hit.normal;
+    const BSDF& bsdf = materials[result.material];
+    if(!bsdf.is_sided() && dot(result.normal, ray.dir) > 0.0f) {
+        result.normal = -result.normal;
     }
 
-    // Set up a coordinate frame at the hit point, where the surface normal becomes {0, 1, 0}
-    // This gives us out_dir and later in_dir in object space, where computations involving the
-    // normal become much easier. For example, cos(theta) = dot(N,dir) = dir.y!
-    Mat4 object_to_world = Mat4::rotate_to(hit.normal);
+    // TODO (PathTracer): Task 4
+    // You will want to change the default normal_colors in debug.h, or delete this early out.
+    if(debug_data.normal_colors) return {Spectrum::direction(result.normal), {}};
+
+    // If the BSDF is emissive, stop tracing and return the emitted light
+    Spectrum emissive = bsdf.emissive();
+    if(emissive.luma() > 0.0f) return {emissive, {}};
+
+    // If the ray has reached maximum depth, stop tracing
+    if(ray.depth == 0) return {};
+
+    // Set up shading information
+    Mat4 object_to_world = Mat4::rotate_to(result.normal);
     Mat4 world_to_object = object_to_world.T();
-    Vec3 out_dir = world_to_object.rotate(ray.point - hit.position).unit();
+    Vec3 out_dir = world_to_object.rotate(ray.point - result.position).unit();
 
-    // Debugging: if the normal colors flag is set, return the normal color
-    if(debug_data.normal_colors) return Spectrum::direction(hit.normal);
+    Shading_Info hit = {bsdf,    world_to_object, object_to_world, result.position,
+                        out_dir, result.normal,   ray.depth};
 
-    // Now we can compute the rendering equation at this point.
-    // We split it into two stages: sampling lighting (i.e. directly connecting
-    // the current path to each light in the scene), then sampling the BSDF
-    // to create a new path segment.
-
-    // TODO (PathTracer): Task 5
-    // The starter code sets radiance_out to (0.5,0.5,0.5) so that you can test your geometry
-    // queries before you implement path tracing. You should change this to (0,0,0) and accumulate
-    // the direct and indirect lighting computed below.
-    Spectrum radiance_out = Spectrum(0.5f);
-    {
-        auto sample_light = [&](const auto& light) {
-            // If the light is discrete (e.g. a point light), then we only need
-            // one sample, as all samples will be equivalent
-            int samples = light.is_discrete() ? 1 : (int)n_area_samples;
-            for(int i = 0; i < samples; i++) {
-
-                Light_Sample sample = light.sample(hit.position);
-                Vec3 in_dir = world_to_object.rotate(sample.direction);
-
-                // If the light is below the horizon, ignore it
-                float cos_theta = in_dir.y;
-                if(cos_theta <= 0.0f) continue;
-
-                // If the BSDF has 0 throughput in this direction, ignore it.
-                // This is another oppritunity to do Russian roulette on low-throughput rays,
-                // which would allow us to skip the shadow ray cast, increasing efficiency.
-                Spectrum attenuation = bsdf.evaluate(out_dir, in_dir);
-                if(attenuation.luma() == 0.0f) continue;
-
-                // TODO (PathTracer): Task 4
-                // Construct a shadow ray and compute whether the intersected surface is
-                // in shadow. Only accumulate light if not in shadow.
-
-                // Tip: since you're creating the shadow ray at the intersection point, it may
-                // intersect the surface at time=0. Similarly, if the ray is allowed to have
-                // arbitrary length, it will hit the light it was cast at. Therefore, you should
-                // modify the time_bounds of your shadow ray to account for this. Using EPS_F is
-                // recommended.
-
-                // Note: that along with the typical cos_theta, pdf factors, we divide by samples.
-                // This is because we're  doing another monte-carlo estimate of the lighting from
-                // area lights.
-                radiance_out +=
-                    (cos_theta / (samples * sample.pdf)) * sample.radiance * attenuation;
-            }
-        };
-
-        // If the BSDF is discrete (i.e. uses dirac deltas/if statements), then we are never
-        // going to hit the exact right direction by sampling lights, so ignore them.
-        if(!bsdf.is_discrete()) {
-            for(const auto& light : lights) sample_light(light);
-            if(env_light.has_value()) sample_light(env_light.value());
-        }
-    }
-
-    // TODO (PathTracer): Task 5
-    // Compute an indirect lighting estimate using pathtracing with Monte Carlo.
-
-    // (1) Ray objects have a depth field; if it reaches max_depth, you should
-    // terminate the path.
-
-    // (2) Randomly select a new ray direction (it may be reflection or transmittance
-    // ray depending on surface type) using bsdf.sample()
-
-    // (3) Compute the throughput of the recursive ray. This should be the current ray's
-    // throughput scaled by the BSDF attenuation, cos(theta), and inverse BSDF sample PDF.
-    // Potentially terminate the path using Russian roulette as a function of the new throughput.
-    // Note that allowing the termination probability to approach 1 may cause extra speckling.
-
-    // (4) Create new scene-space ray and cast it to get incoming light. As with shadow rays, you
-    // should modify time_bounds so that the ray does not intersect at time = 0. Remember to
-    // set the new throughput and depth values.
-
-    // (5) Add contribution due to incoming light with proper weighting. Remember to add in
-    // the BSDF sample emissive term.
-    return radiance_out;
+    // Sample and return light reflected through the intersection
+    return {{}, sample_direct_lighting(hit) + sample_indirect_lighting(hit)};
 }
 
 } // namespace PT

@@ -23,18 +23,6 @@ template<typename T1, typename T2> struct hash<pair<T1, T2>> {
 };
 } // namespace std
 
-Scene_Item::Scene_Item(Scene_Object&& obj) : data(std::move(obj)) {
-}
-
-Scene_Item::Scene_Item(Scene_Light&& light) : data(std::move(light)) {
-}
-
-Scene_Item::Scene_Item(Scene_Particles&& particles) : data(std::move(particles)) {
-}
-
-Scene_Item::Scene_Item(Scene_Item&& src) : data(std::move(src.data)) {
-}
-
 Scene_Item& Scene_Item::operator=(Scene_Item&& src) {
     data = std::move(src.data);
     return *this;
@@ -60,82 +48,42 @@ Scene_ID Scene_Item::id() const {
     return std::visit([](auto& obj) { return obj.id(); }, data);
 }
 
+void Scene_Item::step(const PT::Object& scene, float dt) {
+    std::visit([&](auto& obj) { obj.step(scene, dt); }, data);
+}
+
 Anim_Pose& Scene_Item::animation() {
 
-    Scene_Object* o = std::get_if<Scene_Object>(&data);
-    if(o) return o->anim;
-    Scene_Light* l = std::get_if<Scene_Light>(&data);
-    if(l) return l->anim;
-    Scene_Particles* p = std::get_if<Scene_Particles>(&data);
-    if(p) return p->anim;
-
-    assert(false);
-    return l->anim;
+    return std::visit([](auto& obj) -> Anim_Pose& { return obj.anim; }, data);
 }
 
 const Anim_Pose& Scene_Item::animation() const {
 
-    const Scene_Object* o = std::get_if<Scene_Object>(&data);
-    if(o) return o->anim;
-    const Scene_Light* l = std::get_if<Scene_Light>(&data);
-    if(l) return l->anim;
-    const Scene_Particles* p = std::get_if<Scene_Particles>(&data);
-    if(p) return p->anim;
-
-    assert(false);
-    return l->anim;
+    return std::visit([](auto& obj) -> const Anim_Pose& { return obj.anim; }, data);
 }
 
 Pose& Scene_Item::pose() {
 
-    Scene_Object* o = std::get_if<Scene_Object>(&data);
-    if(o) return o->pose;
-    Scene_Light* l = std::get_if<Scene_Light>(&data);
-    if(l) return l->pose;
-    Scene_Particles* p = std::get_if<Scene_Particles>(&data);
-    if(p) return p->pose;
-
-    assert(false);
-    return l->pose;
+    return std::visit([](auto& obj) -> Pose& { return obj.pose; }, data);
 }
 
 const Pose& Scene_Item::pose() const {
 
-    const Scene_Object* o = std::get_if<Scene_Object>(&data);
-    if(o) return o->pose;
-    const Scene_Light* l = std::get_if<Scene_Light>(&data);
-    if(l) return l->pose;
-    const Scene_Particles* p = std::get_if<Scene_Particles>(&data);
-    if(p) return p->pose;
-
-    assert(false);
-    return l->pose;
+    return std::visit([](auto& obj) -> const Pose& { return obj.pose; }, data);
 }
 
 std::pair<char*, int> Scene_Item::name() {
 
-    Scene_Object* o = std::get_if<Scene_Object>(&data);
-    if(o) return {o->opt.name, Scene_Object::max_name_len};
-    Scene_Light* l = std::get_if<Scene_Light>(&data);
-    if(l) return {l->opt.name, Scene_Light::max_name_len};
-    Scene_Particles* p = std::get_if<Scene_Particles>(&data);
-    if(p) return {p->opt.name, Scene_Particles::max_name_len};
-
-    assert(false);
-    return {l->opt.name, Scene_Object::max_name_len};
+    return std::visit(
+        [](auto& obj) -> std::pair<char*, int> {
+            return {obj.opt.name, MAX_NAME_LEN};
+        },
+        data);
 }
 
 std::string Scene_Item::name() const {
 
-    const Scene_Object* o = std::get_if<Scene_Object>(&data);
-    if(o) return std::string(o->opt.name);
-    const Scene_Light* l = std::get_if<Scene_Light>(&data);
-    if(l) return std::string(l->opt.name);
-    const Scene_Particles* p = std::get_if<Scene_Particles>(&data);
-    if(p) return std::string(p->opt.name);
-
-    assert(false);
-    return std::string(l->opt.name);
+    return std::visit([](auto& obj) { return std::string(obj.opt.name); }, data);
 }
 
 Scene::Scene(Scene_ID start) : next_id(start), first_id(start) {
@@ -191,28 +139,10 @@ bool Scene::has_obj() const {
     return ret;
 }
 
-bool Scene::has_particles() const {
+bool Scene::has_sim() const {
     bool ret = false;
     for_items([&ret](const Scene_Item& item) { ret = ret || item.is<Scene_Particles>(); });
     return ret;
-}
-
-Scene_ID Scene::add(Scene_Light&& obj) {
-    assert(objs.find(obj.id()) == objs.end());
-    objs.emplace(std::make_pair(obj.id(), std::move(obj)));
-    return obj.id();
-}
-
-Scene_ID Scene::add(Scene_Object&& obj) {
-    assert(objs.find(obj.id()) == objs.end());
-    objs.emplace(std::make_pair(obj.id(), std::move(obj)));
-    return obj.id();
-}
-
-Scene_ID Scene::add(Scene_Particles&& obj) {
-    assert(objs.find(obj.id()) == objs.end());
-    objs.emplace(std::make_pair(obj.id(), std::move(obj)));
-    return obj.id();
 }
 
 void Scene::restore(Scene_ID id) {
@@ -256,27 +186,6 @@ Scene_Maybe Scene::get(Scene_ID id) {
     return entry->second;
 }
 
-Scene_Light& Scene::get_light(Scene_ID id) {
-    auto entry = objs.find(id);
-    assert(entry != objs.end());
-    assert(entry->second.is<Scene_Light>());
-    return entry->second.get<Scene_Light>();
-}
-
-Scene_Object& Scene::get_obj(Scene_ID id) {
-    auto entry = objs.find(id);
-    assert(entry != objs.end());
-    assert(entry->second.is<Scene_Object>());
-    return entry->second.get<Scene_Object>();
-}
-
-Scene_Particles& Scene::get_particles(Scene_ID id) {
-    auto entry = objs.find(id);
-    assert(entry != objs.end());
-    assert(entry->second.is<Scene_Particles>());
-    return entry->second.get<Scene_Particles>();
-}
-
 void Scene::clear(Undo& undo) {
     next_id = first_id;
     objs.clear();
@@ -303,7 +212,6 @@ static const std::string EMITTER_ANIM = "EMITTER_ANIM_NODE";
 
 static const std::string HEMISPHERE_TAG = "HEMISPHERE";
 static const std::string SPHERE_TAG = "SPHERE";
-static const std::string AREA_TAG = "AREA";
 static const std::string LIGHT_ANIM = "LIGHT_ANIM_NODE";
 
 static const std::string JOINT_TAG = "JOINT";
@@ -348,7 +256,7 @@ static aiMatrix4x4 node_transform(const aiNode* node) {
     return T;
 }
 
-static GL::Mesh mesh_from(const aiMesh* mesh) {
+static GL::Mesh mesh_from(const aiMesh* mesh, bool n_flip) {
 
     std::vector<GL::Mesh::Vert> mesh_verts;
     std::vector<GL::Mesh::Index> mesh_inds;
@@ -370,6 +278,26 @@ static GL::Mesh mesh_from(const aiMesh* mesh) {
             mesh_inds.push_back(start);
             mesh_inds.push_back(face.mIndices[k]);
             mesh_inds.push_back(face.mIndices[k + 1]);
+        }
+    }
+
+    if(!mesh->HasNormals()) {
+        std::vector<Vec3> v_normals(mesh_verts.size());
+        for(size_t i = 0; i < mesh_inds.size(); i += 3) {
+            auto v0i = mesh_inds[i];
+            auto v1i = mesh_inds[i + 1];
+            auto v2i = mesh_inds[i + 2];
+            auto& v0 = mesh_verts[v0i];
+            auto& v1 = mesh_verts[v1i];
+            auto& v2 = mesh_verts[v2i];
+            Vec3 face_n = cross(v2.pos - v0.pos, v1.pos - v0.pos);
+            v_normals[v0i] += face_n;
+            v_normals[v1i] += face_n;
+            v_normals[v2i] += face_n;
+        }
+        for(size_t i = 0; i < mesh_verts.size(); i++) {
+            Vec3 vert_n = v_normals[i].norm_squared() == 0.0f ? Vec3{} : v_normals[i].unit();
+            mesh_verts[i].norm = n_flip ? -vert_n : vert_n;
         }
     }
 
@@ -410,6 +338,7 @@ static Scene_Particles::Options load_particles(aiLight* ai_light, aiNode* anim_n
     opt.enabled = ai_light->mAttenuationQuadratic > 0.0f;
     opt.angle = std::abs(ai_light->mAttenuationQuadratic);
     opt.pps = ai_light->mColorDiffuse.r;
+    opt.dt = ai_light->mColorDiffuse.g;
 
     if(anim_node) {
         aiVector3D ascale, arot, apos;
@@ -420,7 +349,7 @@ static Scene_Particles::Options load_particles(aiLight* ai_light, aiNode* anim_n
     return opt;
 }
 
-static Scene_Light::Options load_light(aiLight* ai_light, bool hemi, bool sphere, bool area) {
+static Scene_Light::Options load_light(aiLight* ai_light, bool hemi, bool sphere) {
 
     Scene_Light::Options opt;
     aiColor3D color;
@@ -448,18 +377,8 @@ static Scene_Light::Options load_light(aiLight* ai_light, bool hemi, bool sphere
             if(ai_light->mEnvMap.length) {
                 opt.has_emissive_map = true;
             }
-        } else if(area) {
-            opt.type = Light_Type::rectangle;
-            opt.size.x = ai_light->mAttenuationConstant;
-            opt.size.y = ai_light->mAttenuationLinear;
         }
         color = ai_light->mColorAmbient;
-    } break;
-    case aiLightSource_AREA: {
-        opt.type = Light_Type::rectangle;
-        opt.size.x = ai_light->mSize.x;
-        opt.size.y = ai_light->mSize.y;
-        color = ai_light->mColorDiffuse;
     } break;
     default: break;
     }
@@ -510,6 +429,7 @@ static Material::Options load_material(aiMaterial* ai_mat, float& was_sphere) {
     } else {
         mat = Material::Options();
     }
+
     mat.emissive *= 1.0f / mat.intensity;
 
     if(type.find(SPHERESHAPE_TAG) != std::string::npos) {
@@ -579,7 +499,7 @@ static void load_node(Scene& scobj, std::vector<std::string>& errors,
             std::string err = hemesh.from_poly(polys, verts);
             if(!err.empty()) {
 
-                GL::Mesh gmesh = mesh_from(mesh);
+                GL::Mesh gmesh = mesh_from(mesh, do_flip);
                 errors.push_back(err);
                 Scene_Object obj(scobj.reserve_id(), p, std::move(gmesh), name);
                 new_obj = std::move(obj);
@@ -589,6 +509,7 @@ static void load_node(Scene& scobj, std::vector<std::string>& errors,
                 if(do_flip) hemesh.flip();
                 Scene_Object obj(scobj.reserve_id(), p, std::move(hemesh), name);
                 obj.opt.smooth_normals = do_smooth;
+                obj.set_mesh_dirty();
                 new_obj = std::move(obj);
             }
         }
@@ -765,7 +686,7 @@ std::string Scene::load(Scene::Load_Opts loader, Undo& undo, Gui::Manager& gui, 
 
         bool was_exported_from_s3d = false;
         float export_power = 1.0f;
-        bool is_sphere = false, is_hemisphere = false, is_area = false, is_emitter = false;
+        bool is_sphere = false, is_hemisphere = false, is_emitter = false;
 
         std::string name = std::string(node->mName.C_Str());
 
@@ -783,8 +704,6 @@ std::string Scene::load(Scene::Load_Opts loader, Undo& undo, Gui::Manager& gui, 
                 is_hemisphere = true;
             else if(left.find(SPHERE_TAG) != std::string::npos)
                 is_sphere = true;
-            else if(left.find(AREA_TAG) != std::string::npos)
-                is_area = true;
             else if(left.find(EMITTER_TAG) != std::string::npos)
                 is_emitter = true;
         }
@@ -801,12 +720,12 @@ std::string Scene::load(Scene::Load_Opts loader, Undo& undo, Gui::Manager& gui, 
 
                 if(anim_node->mNumMeshes > 0) {
                     aiMesh* mesh = scene->mMeshes[anim_node->mMeshes[0]];
-                    particles.take_mesh(mesh_from(mesh));
+                    particles.take_mesh(mesh_from(mesh, false));
                 }
             }
 
             Scene_Particles::Options opt = load_particles(ai_light, anim_node);
-            snprintf(opt.name, Scene_Particles::max_name_len, "%s", name.c_str());
+            snprintf(opt.name, MAX_NAME_LEN, "%s", name.c_str());
             particles.opt = opt;
 
             add(std::move(particles));
@@ -816,14 +735,14 @@ std::string Scene::load(Scene::Load_Opts loader, Undo& undo, Gui::Manager& gui, 
             aiColor3D color;
             Scene_Light light(Light_Type::point, reserve_id(), p, name);
 
-            Scene_Light::Options opt = load_light(ai_light, is_hemisphere, is_sphere, is_area);
+            Scene_Light::Options opt = load_light(ai_light, is_hemisphere, is_sphere);
             if(was_exported_from_s3d) {
                 float factor = opt.intensity / export_power;
                 opt.spectrum *= factor;
                 opt.intensity = export_power;
             }
 
-            snprintf(opt.name, Scene_Object::max_name_len, "%s", name.c_str());
+            snprintf(opt.name, MAX_NAME_LEN, "%s", name.c_str());
             light.opt = opt;
 
             if(light.opt.has_emissive_map) {
@@ -922,22 +841,21 @@ std::string Scene::load(Scene::Load_Opts loader, Undo& undo, Gui::Manager& gui, 
             // Load animated light
             load_anim(node, LIGHT_ANIM, [&](float t, Vec3 p, Quat q, Vec3 s) {
                 Vec3 a = q.to_euler();
-                Scene_Light::Anim_Light& light = get_light(id).lanim;
-                light.splines.set(t, Spectrum{p.x, p.y, p.z}, s.x - 1.0f, Vec2{a.x, a.z},
-                                  Vec2{s.y - 1.0f, s.z - 1.0f});
+                Scene_Light::Anim_Light& light = get<Scene_Light>(id).lanim;
+                light.splines.set(t, Spectrum{p.x, p.y, p.z}, s.x - 1.0f, Vec2{a.x, a.z});
             });
 
             // Load animated particle emitter
             load_anim(node, EMITTER_ANIM, [&](float t, Vec3 p, Quat q, Vec3 s) {
-                Scene_Particles::Anim_Particles& particles = get_particles(id).panim;
+                Scene_Particles::Anim_Particles& particles = get<Scene_Particles>(id).panim;
                 Vec3 a = q.to_euler();
-                particles.splines.set(t, Spectrum{p.x, p.y, p.z}, s.z - 1.0f, a.z, a.x, s.y - 1.0f,
-                                      std::abs(s.x) - 1.0f, s.x > 0.0f);
+                particles.splines.set(t, Spectrum{std::abs(p.x), p.y, p.z}, s.z - 1.0f, a.z, a.x,
+                                      s.y - 1.0f, s.x - 1.0f, p.x > 0.0f);
             });
 
             // Load animated material part 1
             load_anim(node, MAT_ANIM0, [&](float t, Vec3 p, Quat q, Vec3 s) {
-                Material::Anim_Material& mat = get_obj(id).material.anim;
+                Material::Anim_Material& mat = get<Scene_Object>(id).material.anim;
                 Vec3 a = q.to_euler();
                 Vec3 r = s - Vec3{1.0f};
                 Material::Options opts;
@@ -950,7 +868,7 @@ std::string Scene::load(Scene::Load_Opts loader, Undo& undo, Gui::Manager& gui, 
 
             // Load animated material part 2
             load_anim(node, MAT_ANIM1, [&](float t, Vec3 p, Quat q, Vec3 s) {
-                Material::Anim_Material& mat = get_obj(id).material.anim;
+                Material::Anim_Material& mat = get<Scene_Object>(id).material.anim;
                 Vec3 a = q.to_euler();
                 Vec3 v = s - Vec3{1.0f};
                 Material::Options opts;
@@ -973,7 +891,6 @@ std::string Scene::load(Scene::Load_Opts loader, Undo& undo, Gui::Manager& gui, 
         if(anim->mDuration > 0.0f) {
             gui.get_animate().set((int)std::ceil(anim->mDuration),
                                   (int)std::round(anim->mTicksPerSecond), loader.new_scene);
-            
         }
     }
     gui.get_animate().refresh(*this);
@@ -999,7 +916,7 @@ static void write_particles(aiLight* ai_light, const Scene_Particles::Options& o
     ai_light->mDirection = aiVector3D(0.0f, 1.0f, 0.0f);
     ai_light->mUp = aiVector3D(0.0f, 1.0f, 0.0f);
     ai_light->mColorAmbient = aiColor3D(r.r, r.g, r.b);
-    ai_light->mColorDiffuse = aiColor3D(opt.pps, 0.0f, 0.0f);
+    ai_light->mColorDiffuse = aiColor3D(opt.pps, opt.dt, 0.0f);
     ai_light->mAttenuationConstant = opt.scale;
     ai_light->mAttenuationLinear = opt.velocity;
     ai_light->mAttenuationQuadratic = opt.enabled ? opt.angle : -opt.angle;
@@ -1038,14 +955,6 @@ static std::string write_light(aiLight* ai_light, const Scene_Light::Options& op
         ai_light->mType = aiLightSource_SPOT;
         ai_light->mColorDiffuse = aiColor3D(r.r, r.g, r.b);
         name += "-S3D-" + std::to_string(id);
-    } break;
-    case Light_Type::rectangle: {
-        // the collada exporter literally just ignores area lights ????????
-        ai_light->mType = aiLightSource_AMBIENT;
-        ai_light->mColorAmbient = aiColor3D(r.r, r.g, r.b);
-        name += "-S3D-" + AREA_TAG + "-" + std::to_string(id);
-        ai_light->mAttenuationConstant = opt.size.x;
-        ai_light->mAttenuationLinear = opt.size.y;
     } break;
     default: break;
     }
@@ -1696,9 +1605,9 @@ std::string Scene::write(std::string file, const Camera& render_cam,
                 const Scene_Light::Anim_Light& light = item.get<Scene_Light>().lanim;
 
                 write_anim(name, light.splines, [&light](float t) -> std::tuple<Vec3, Quat, Vec3> {
-                    auto [spec, inten, angle, size] = light.splines.at(t);
+                    auto [spec, inten, angle] = light.splines.at(t);
                     return {Vec3{spec.r, spec.g, spec.b}, Quat::euler(Vec3{angle.x, 0.0f, angle.y}),
-                            Vec3{inten, size.x, size.y} + Vec3{1.0f}};
+                            Vec3{inten, 1.0f, 1.0f}};
                 });
 
             } else if(item.is<Scene_Particles>()) {
@@ -1709,12 +1618,13 @@ std::string Scene::write(std::string file, const Camera& render_cam,
                 const Scene_Particles::Anim_Particles& particles =
                     item.get<Scene_Particles>().panim;
 
-                write_anim(
-                    name, particles.splines, [&particles](float t) -> std::tuple<Vec3, Quat, Vec3> {
-                        auto [col, vel, ang, scl, life, pps, en] = particles.splines.at(t);
-                        return {Vec3{col.r, col.g, col.b}, Quat::euler(Vec3{scl, 0.0f, ang}),
-                                Vec3{en ? (pps + 1.0f) : -(pps + 1.0f), life + 1.0f, vel + 1.0f}};
-                    });
+                write_anim(name, particles.splines,
+                           [&particles](float t) -> std::tuple<Vec3, Quat, Vec3> {
+                               auto [col, vel, ang, scl, life, pps, en] = particles.splines.at(t);
+                               return {Vec3{en ? col.r : -col.r, col.g, col.b},
+                                       Quat::euler(Vec3{scl, 0.0f, ang}),
+                                       Vec3{pps + 1.0f, life + 1.0f, vel + 1.0f}};
+                           });
             }
         }
     }

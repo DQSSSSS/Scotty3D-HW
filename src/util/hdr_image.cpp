@@ -121,8 +121,8 @@ std::string HDR_Image::load_from(std::string file) {
         stbi_image_free(data);
 
         for(size_t i = 0; i < pixels.size(); i++) {
-            pixels[i].make_linear();
             if(!pixels[i].valid()) pixels[i] = {};
+            pixels[i] = pixels[i].to_linear();
         }
     }
 
@@ -177,7 +177,7 @@ void HDR_Image::tonemap_to(std::vector<unsigned char>& data, float e) const {
             float b = 1.0f - std::exp(-sample.b * exposure);
 
             Spectrum out(r, g, b);
-            out.make_srgb();
+            out = out.to_srgb();
 
             size_t didx = 4 * (j * w + i);
             data[didx] = (unsigned char)std::round(out.r * 255.0f);

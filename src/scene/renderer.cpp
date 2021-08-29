@@ -84,7 +84,10 @@ void Renderer::save(Scene& scene, const Camera& cam, int w, int h, int s) {
     save_buffer.bind();
     GL::viewport(dim);
 
+    Mat4 old_proj = _proj;
+    _proj = cam.get_proj();
     Mat4 view = cam.get_view();
+
     scene.for_items([&](Scene_Item& item) {
         if(item.is<Scene_Light>()) {
             Scene_Light& light = item.get<Scene_Light>();
@@ -101,6 +104,8 @@ void Renderer::save(Scene& scene, const Camera& cam, int w, int h, int s) {
     save_buffer.blit_to(0, save_output, true);
 
     framebuffer.bind();
+
+    _proj = old_proj;
     GL::viewport(window_dim);
 }
 

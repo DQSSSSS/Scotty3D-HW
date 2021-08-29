@@ -31,7 +31,7 @@ public:
 
 private:
     class Node {
-        
+
         BBox bbox;
         size_t start, size, l, r;
 

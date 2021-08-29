@@ -6,6 +6,7 @@
 #include "../scene/scene.h"
 
 class Undo;
+struct Launch_Settings;
 
 namespace Gui {
 
@@ -84,8 +85,8 @@ public:
     void animate(Scene& scene, Widget_Camera& cam, Camera& user_cam, int max_frame);
     std::string step(Animate& animate, Scene& scene);
 
-    std::string headless(Animate& animate, Scene& scene, const Camera& cam, std::string output,
-                         bool a, int w, int h, int s, int ls, int d, float exp);
+    std::string headless(Animate& animate, Scene& scene, const Camera& cam,
+                         const Launch_Settings& set);
 
     void log_ray(const Ray& ray, float t, Spectrum color = Spectrum{1.0f});
     void render_log(const Mat4& view) const;
@@ -100,7 +101,7 @@ public:
         return pathtracer.completion_time();
     }
     bool in_progress() const {
-        return pathtracer.in_progress();
+        return pathtracer.in_progress() || animating;
     }
     float wh_ar() const {
         return (float)out_w / (float)out_h;
@@ -112,8 +113,9 @@ private:
     mutable std::mutex log_mut;
     GL::Lines ray_log;
 
-    int out_w, out_h, out_samples = 32, out_area_samples = 8, out_depth = 4;
+    int out_w, out_h, out_samples = 32, out_depth = 8;
     float exposure = 1.0f;
+    bool use_bvh = true;
 
     bool has_rendered = false;
     bool render_window = false, render_window_focus = false;

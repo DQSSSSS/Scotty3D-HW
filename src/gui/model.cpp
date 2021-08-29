@@ -381,15 +381,14 @@ void Model::rebuild() {
     // Create cylinder for each edge
     cylinders.clear();
     for(auto e = mesh.edges_begin(); e != mesh.edges_end(); e++) {
-        
+
         // We don't want to render edges between two boundary faces, since the boundaries
         // should look contiguous
         if(e->halfedge()->is_boundary() && e->halfedge()->twin()->is_boundary()) {
 
             // Unless both surrounding boundaries are the same face, in which case we should
             // render this edge to show that the next vertex is connected
-            if(e->halfedge()->face() != e->halfedge()->twin()->face()) 
-                continue;
+            if(e->halfedge()->face() != e->halfedge()->twin()->face()) continue;
         }
 
         Mat4 transform;
@@ -418,20 +417,21 @@ bool Model::begin_bevel(std::string& err) {
 
     my_mesh->copy_to(old_mesh);
 
-    auto new_face = std::visit(overloaded{[&](Halfedge_Mesh::VertexRef vert) {
-                              beveling = Bevel::vert;
-                              return my_mesh->bevel_vertex(vert);
-                          },
-                          [&](Halfedge_Mesh::EdgeRef edge) {
-                              beveling = Bevel::edge;
-                              return my_mesh->bevel_edge(edge);
-                          },
-                          [&](Halfedge_Mesh::FaceRef face) {
-                              beveling = Bevel::face;
-                              return my_mesh->bevel_face(face);
-                          },
-                          [&](auto) -> std::optional<Halfedge_Mesh::FaceRef> { return std::nullopt; }},
-               *sel);
+    auto new_face = std::visit(
+        overloaded{[&](Halfedge_Mesh::VertexRef vert) {
+                       beveling = Bevel::vert;
+                       return my_mesh->bevel_vertex(vert);
+                   },
+                   [&](Halfedge_Mesh::EdgeRef edge) {
+                       beveling = Bevel::edge;
+                       return my_mesh->bevel_edge(edge);
+                   },
+                   [&](Halfedge_Mesh::FaceRef face) {
+                       beveling = Bevel::face;
+                       return my_mesh->bevel_face(face);
+                   },
+                   [&](auto) -> std::optional<Halfedge_Mesh::FaceRef> { return std::nullopt; }},
+        *sel);
 
     if(!new_face.has_value()) return false;
     Halfedge_Mesh::FaceRef face = new_face.value();

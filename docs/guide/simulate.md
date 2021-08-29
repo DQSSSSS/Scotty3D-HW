@@ -27,6 +27,6 @@ For example, the `particles.dae` test scene:
 
 <video src="{{ site.baseurl }}/guide/simulate_mode/guide-simulate-1.mp4" controls preload muted loop style="max-width: 100%; margin: 0 auto;"></video>
 
-Finally, note that you can render particles just like any other scene objects. In the path tracer, each particle is also a point light source! Rendering `particles.dae` with depth of field:
+Finally, note that you can render particles just like any other scene objects. Rendering `particles.dae` with depth of field:
 
 ![particles render](simulate_mode/render.png)

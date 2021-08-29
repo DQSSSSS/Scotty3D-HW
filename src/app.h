@@ -14,27 +14,27 @@
 
 class Platform;
 
+struct Launch_Settings {
+
+    std::string scene_file;
+    std::string env_map_file;
+    bool headless = false;
+
+    // If headless is true, use all of these
+    std::string output_file = "out.png";
+    int w = 640;
+    int h = 360;
+    int s = 256;
+    int d = 8;
+    bool animate = false;
+    float exp = 1.0f;
+    bool w_from_ar = false;
+    bool no_bvh = false;
+};
+
 class App {
 public:
-    struct Settings {
-
-        std::string scene_file;
-        std::string env_map_file;
-        bool headless = false;
-
-        // If headless is true, use all of these
-        std::string output_file = "out.png";
-        int w = 640;
-        int h = 360;
-        int s = 128;
-        int ls = 16;
-        int d = 4;
-        bool animate = false;
-        float exp = 1.0f;
-        bool w_from_ar = false;
-    };
-
-    App(Settings set, Platform* plt = nullptr);
+    App(Launch_Settings set, Platform* plt = nullptr);
     ~App();
 
     void render();

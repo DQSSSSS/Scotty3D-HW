@@ -14,19 +14,19 @@ template<typename T> class BVH;
 class Object;
 } // namespace PT
 
-struct Particle {
-
-    Vec3 pos;
-    Vec3 velocity;
-    float age;
-
-    static const inline Vec3 acceleration = Vec3{0.0f, -9.8f, 0.0f};
-
-    bool update(const PT::BVH<PT::Object>& scene, float dt, float radius);
-};
-
 class Scene_Particles {
 public:
+    struct Particle {
+
+        Vec3 pos;
+        Vec3 velocity;
+        float age;
+
+        static const inline Vec3 acceleration = Vec3{0.0f, -9.8f, 0.0f};
+
+        bool update(const PT::Object& scene, float dt, float radius);
+    };
+
     Scene_Particles(Scene_ID id);
     Scene_Particles(Scene_ID id, Pose p, std::string name);
     Scene_Particles(Scene_ID id, GL::Mesh&& mesh);
@@ -38,26 +38,30 @@ public:
     Scene_Particles& operator=(Scene_Particles&& src) = default;
 
     void clear();
-    void step(const PT::BVH<PT::Object>& scene, float dt);
+    void step(const PT::Object& scene, float dt);
+    void step2(const PT::Object& scene, float dt);
+    void gen_instances();
+
     const std::vector<Particle>& get_particles() const;
 
     BBox bbox() const;
-    void render(const Mat4& view, bool depth_only = false, bool posed = true, bool particles_only = false);
+    void render(const Mat4& view, bool depth_only = false, bool posed = true,
+                bool particles_only = false);
     Scene_ID id() const;
     void set_time(float time);
 
     const GL::Mesh& mesh() const;
     void take_mesh(GL::Mesh&& mesh);
 
-    static const inline int max_name_len = 256;
     struct Options {
-        char name[max_name_len] = {};
+        char name[MAX_NAME_LEN] = {};
         Spectrum color = Spectrum(1.0f);
         float velocity = 25.0f;
         float angle = 0.0f;
         float scale = 0.1f;
         float lifetime = 15.0f;
         float pps = 5.0f;
+        float dt = 0.01f;
         bool enabled = false;
     };
 
@@ -80,6 +84,7 @@ private:
     GL::Mesh arrow;
 
     float radius = 0.0f;
+    float last_update = 0.0f;
     double particle_cooldown = 0.0f;
 };
 

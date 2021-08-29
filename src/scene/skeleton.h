@@ -109,10 +109,8 @@ public:
     Mat4 joint_to_bind(const Joint* j) const;
     Mat4 joint_to_posed(const Joint* j) const;
 
-    void find_joints(const GL::Mesh& src,
-                     std::unordered_map<unsigned int, std::vector<Joint*>>& map);
-    void skin(const GL::Mesh& input, GL::Mesh& output,
-              const std::unordered_map<unsigned int, std::vector<Joint*>>& map);
+    void find_joints(const GL::Mesh& src, std::vector<std::vector<Joint*>>& map);
+    void skin(const GL::Mesh& input, GL::Mesh& output, const std::vector<std::vector<Joint*>>& map);
 
     ////////////////////////////////////////////
 

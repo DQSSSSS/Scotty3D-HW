@@ -8,7 +8,7 @@
 #include "platform/platform.h"
 #include "scene/renderer.h"
 
-App::App(Settings set, Platform* plt)
+App::App(Launch_Settings set, Platform* plt)
     : window_dim(plt ? plt->window_draw() : Vec2{1.0f}),
       camera(plt ? plt->window_draw() : Vec2{1.0f}), plt(plt), scene(Gui::n_Widget_IDs),
       gui(scene, plt ? plt->window_size() : Vec2{1.0f}), undo(scene, gui) {
@@ -44,9 +44,7 @@ App::App(Settings set, Platform* plt)
     } else if(loaded_scene) {
 
         info("Rendering scene...");
-        err = gui.get_render().headless_render(gui.get_animate(), scene, set.output_file,
-                                               set.animate, set.w, set.h, set.s, set.ls, set.d,
-                                               set.exp, set.w_from_ar);
+        err = gui.get_render().headless_render(gui.get_animate(), scene, set);
 
         if(!err.empty())
             warn("Error rendering scene: %s", err.c_str());
@@ -132,7 +130,8 @@ void App::event(SDL_Event e) {
             Scene_ID id = Renderer::get().read_id(p);
 
             if(cam_mode == Camera_Control::none &&
-               (plt->is_down(SDL_SCANCODE_LSHIFT) | plt->is_down(SDL_SCANCODE_RSHIFT))) {
+               ((plt->is_down(SDL_SCANCODE_LSHIFT) | plt->is_down(SDL_SCANCODE_RSHIFT) |
+                 (plt->is_down(SDL_SCANCODE_LALT) | plt->is_down(SDL_SCANCODE_RALT))))) {
                 cam_mode = Camera_Control::orbit;
             } else if(gui.select(scene, undo, id, camera.pos(), n, screen_to_world(p))) {
                 cam_mode = Camera_Control::none;
@@ -149,7 +148,12 @@ void App::event(SDL_Event e) {
                 cam_mode = Camera_Control::move;
             }
         } else if(e.button.button == SDL_BUTTON_MIDDLE) {
-            cam_mode = Camera_Control::orbit;
+            if(cam_mode == Camera_Control::none &&
+               ((plt->is_down(SDL_SCANCODE_LALT) | plt->is_down(SDL_SCANCODE_RALT)))) {
+                cam_mode = Camera_Control::move;
+            } else {
+                cam_mode = Camera_Control::orbit;
+            }
         }
 
     } break;
@@ -178,7 +182,8 @@ void App::event(SDL_Event e) {
 
         if((e.button.button == SDL_BUTTON_LEFT && cam_mode == Camera_Control::orbit) ||
            (e.button.button == SDL_BUTTON_MIDDLE && cam_mode == Camera_Control::orbit) ||
-           (e.button.button == SDL_BUTTON_RIGHT && cam_mode == Camera_Control::move)) {
+           (e.button.button == SDL_BUTTON_RIGHT && cam_mode == Camera_Control::move) ||
+           (e.button.button == SDL_BUTTON_MIDDLE && cam_mode == Camera_Control::move)) {
             cam_mode = Camera_Control::none;
         }
 

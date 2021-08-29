@@ -123,7 +123,7 @@ struct Vec2 {
     }
     /// Are all members real numbers?
     bool valid() const {
-        return !(std::isinf(x) || std::isinf(y) || std::isnan(x) || std::isnan(y));
+        return std::isfinite(x) && std::isfinite(y);
     }
 
     /// Modify vec to have unit length

@@ -22,6 +22,16 @@ inline std::string last_file(std::string path) {
     return path.substr(p, path.size() - p);
 }
 
+#ifdef _MSC_VER
+#define DEBUG_BREAK __debugbreak()
+#elif defined(__GNUC__)
+#define DEBUG_BREAK __builtin_trap()
+#elif defined(__clang__)
+#define DEBUG_BREAK __builtin_debugtrap()
+#else
+#error Unsupported compiler.
+#endif
+
 /// Log informational message
 #define info(fmt, ...)                                                                             \
     (void)(log("%s:%u [info] " fmt "\n", last_file(__FILE__).c_str(), __LINE__, ##__VA_ARGS__))
@@ -35,17 +45,7 @@ inline std::string last_file(std::string path) {
 #define die(fmt, ...)                                                                              \
     (void)(log("\033[0;31m%s:%u [fatal] " fmt "\033[0m\n", last_file(__FILE__).c_str(), __LINE__,  \
                ##__VA_ARGS__),                                                                     \
-           std::exit(__LINE__));
-
-#ifdef _MSC_VER
-#define DEBUG_BREAK __debugbreak()
-#elif defined(__GNUC__)
-#define DEBUG_BREAK __builtin_trap()
-#elif defined(__clang__)
-#define DEBUG_BREAK __builtin_debugtrap()
-#else
-#error Unsupported compiler.
-#endif
+           DEBUG_BREAK, std::exit(__LINE__));
 
 #define fail_assert(msg, file, line)                                                               \
     (void)(log("\033[1;31m%s:%u [ASSERT] " msg "\033[0m\n", file, line), DEBUG_BREAK,              \

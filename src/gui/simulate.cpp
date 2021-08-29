@@ -24,11 +24,7 @@ bool Simulate::keydown(Widgets& widgets, Undo& undo, SDL_Keysym key) {
 }
 
 void Simulate::step(Scene& scene, float dt) {
-    scene.for_items([this, dt](Scene_Item& item) {
-        if(item.is<Scene_Particles>()) {
-            item.get<Scene_Particles>().step(scene_bvh, dt);
-        }
-    });
+    scene.for_items([this, dt](Scene_Item& item) { item.step(scene_obj, dt); });
 }
 
 void Simulate::update_time() {
@@ -48,14 +44,7 @@ void Simulate::update(Scene& scene, Undo& undo) {
     float dt = clamp((float)(udt / freq), 0.0f, 0.05f);
     last_update = time;
 
-    scene.for_items([this, dt](Scene_Item& item) {
-        if(item.is<Scene_Particles>()) {
-            Scene_Particles& particles = item.get<Scene_Particles>();
-            if(particles.opt.enabled) {
-                particles.step(scene_bvh, dt);
-            }
-        }
-    });
+    step(scene, dt);
 }
 
 void Simulate::render(Scene_Maybe obj_opt, Widgets& widgets, Camera& cam) {
@@ -68,52 +57,46 @@ void Simulate::render(Scene_Maybe obj_opt, Widgets& widgets, Camera& cam) {
         if(light.is_env()) return;
     }
 
-    Pose& pose = item.pose();
-    float scale = std::min((cam.pos() - pose.pos).norm() / 5.5f, 10.0f);
     Mat4 view = cam.get_view();
-
     item.render(view);
     Renderer::get().outline(view, item);
+
+    Pose& pose = item.pose();
+    float scale = std::min((cam.pos() - pose.pos).norm() / 5.5f, 10.0f);
     widgets.render(view, pose.pos, scale);
 }
 
 void Simulate::build_scene(Scene& scene) {
 
-    if(!scene.has_particles()) return;
+    if(!scene.has_sim()) return;
 
-    std::mutex obj_mut;
     std::vector<PT::Object> obj_list;
+    std::vector<std::future<PT::Object>> futures;
 
     scene.for_items([&, this](Scene_Item& item) {
         if(item.is<Scene_Object>()) {
             Scene_Object& obj = item.get<Scene_Object>();
-            thread_pool.enqueue([&]() {
+            futures.push_back(thread_pool.enqueue([&]() {
                 if(obj.is_shape()) {
                     PT::Shape shape(obj.opt.shape);
-                    std::lock_guard<std::mutex> lock(obj_mut);
-                    obj_list.push_back(
-                        PT::Object(std::move(shape), obj.id(), 0, obj.pose.transform()));
+                    return PT::Object(std::move(shape), obj.id(), 0, obj.pose.transform());
                 } else {
-                    PT::Tri_Mesh mesh(obj.posed_mesh());
-                    std::lock_guard<std::mutex> lock(obj_mut);
-                    obj_list.push_back(
-                        PT::Object(std::move(mesh), obj.id(), 0, obj.pose.transform()));
+                    PT::Tri_Mesh mesh(obj.posed_mesh(), use_bvh);
+                    return PT::Object(std::move(mesh), obj.id(), 0, obj.pose.transform());
                 }
-            });
-        } else if(item.is<Scene_Light>()) {
-
-            Scene_Light& light = item.get<Scene_Light>();
-            if(light.opt.type != Light_Type::rectangle) return;
-
-            PT::Tri_Mesh mesh(Util::quad_mesh(light.opt.size.x, light.opt.size.y));
-
-            std::lock_guard<std::mutex> lock(obj_mut);
-            obj_list.push_back(PT::Object(std::move(mesh), light.id(), 0, light.pose.transform()));
+            }));
         }
     });
 
-    thread_pool.wait();
-    scene_bvh.build(std::move(obj_list));
+    for(auto& f : futures) {
+        obj_list.push_back(f.get());
+    }
+
+    if(use_bvh) {
+        scene_obj = PT::Object(PT::BVH<PT::Object>(std::move(obj_list)));
+    } else {
+        scene_obj = PT::Object(PT::List<PT::Object>(std::move(obj_list)));
+    }
 }
 
 void Simulate::clear_particles(Scene& scene) {
@@ -142,6 +125,13 @@ Mode Simulate::UIsidebar(Manager& manager, Scene& scene, Undo& undo, Widgets& wi
     }
 
     update_bvh(scene, undo);
+
+    ImGui::Text("Simulation");
+
+    if(ImGui::Checkbox("Use BVH", &use_bvh)) {
+        clear_particles(scene);
+        build_scene(scene);
+    }
 
     if(ImGui::CollapsingHeader("Add New Emitter")) {
         ImGui::PushID(0);
@@ -196,7 +186,7 @@ Mode Simulate::UIsidebar(Manager& manager, Scene& scene, Undo& undo, Widgets& wi
                 mesh = Util::sphere_mesh(1.0f, 1);
             } break;
             case Solid_Type::custom: {
-                mesh = scene.get_obj(ids[name_idx]).mesh().copy();
+                mesh = scene.get<Scene_Object>(ids[name_idx]).mesh().copy();
             } break;
             default: break;
             }
@@ -208,15 +198,10 @@ Mode Simulate::UIsidebar(Manager& manager, Scene& scene, Undo& undo, Widgets& wi
             particles.opt.lifetime = gui_opt.lifetime;
             particles.opt.pps = gui_opt.pps;
             particles.opt.enabled = gui_opt.enabled;
-            undo.add_particles(std::move(particles));
+            undo.add(std::move(particles));
         }
 
         ImGui::PopID();
-    }
-
-    if(ImGui::Button("Generate BVH")) {
-        clear_particles(scene);
-        build_scene(scene);
     }
 
     return mode;

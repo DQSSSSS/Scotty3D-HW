@@ -7,15 +7,15 @@
 #include <sstream>
 
 const char* Light_Type_Names[(int)Light_Type::count] = {"Directional", "Sphere", "Hemisphere",
-                                                        "Point",       "Spot",   "Rectangle"};
+                                                        "Point", "Spot"};
 
 Scene_Light::Scene_Light(Light_Type type, Scene_ID id, Pose p, std::string n)
     : pose(p), _id(id), _lines(1.0f) {
     opt.type = type;
     if(n.size()) {
-        snprintf(opt.name, max_name_len, "%s", n.c_str());
+        snprintf(opt.name, MAX_NAME_LEN, "%s", n.c_str());
     } else {
-        snprintf(opt.name, max_name_len, "%s Light %d", Light_Type_Names[(int)type], id);
+        snprintf(opt.name, MAX_NAME_LEN, "%s Light %d", Light_Type_Names[(int)type], id);
     }
 }
 
@@ -77,16 +77,13 @@ void Scene_Light::regen_mesh() {
     case Light_Type::spot: {
         Vec3 col(opt.spectrum.r, opt.spectrum.g, opt.spectrum.b);
         _lines = Util::spotlight_mesh(col, opt.angle_bounds.x, opt.angle_bounds.y);
-        _mesh = Util::sphere_mesh(0.15f, 2);
+        _mesh = Util::sphere_mesh(0.1f, 1);
     } break;
     case Light_Type::directional: {
         _mesh = Util::arrow_mesh(0.03f, 0.075f, 1.0f);
     } break;
     case Light_Type::point: {
-        _mesh = Util::sphere_mesh(0.15f, 2);
-    } break;
-    case Light_Type::rectangle: {
-        _mesh = Util::quad_mesh(opt.size.x, opt.size.y);
+        _mesh = Util::sphere_mesh(0.05f, 1);
     } break;
     default: break;
     }
@@ -108,10 +105,7 @@ void Scene_Light::render(const Mat4& view, bool depth_only, bool posed) {
 
     Renderer& renderer = Renderer::get();
 
-    Spectrum s = opt.spectrum;
-    s.make_srgb();
-    Vec3 col(s.r, s.g, s.b);
-
+    Vec3 col = opt.spectrum.to_vec();
     Mat4 rot = view;
     rot.cols[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -139,18 +133,16 @@ void Scene_Light::render(const Mat4& view, bool depth_only, bool posed) {
 bool operator!=(const Scene_Light::Options& l, const Scene_Light::Options& r) {
     return l.type != r.type || std::string(l.name) != std::string(r.name) ||
            l.spectrum != r.spectrum || l.intensity != r.intensity ||
-           l.angle_bounds != r.angle_bounds || l.size != r.size ||
-           l.has_emissive_map != r.has_emissive_map;
+           l.angle_bounds != r.angle_bounds || l.has_emissive_map != r.has_emissive_map;
 }
 
 void Scene_Light::Anim_Light::at(float t, Options& o) const {
-    auto [s, i, a, sz] = splines.at(t);
+    auto [s, i, a] = splines.at(t);
     o.spectrum = s;
     o.intensity = i;
     o.angle_bounds = a;
-    o.size = sz;
 }
 
 void Scene_Light::Anim_Light::set(float t, Options o) {
-    splines.set(t, o.spectrum, o.intensity, o.angle_bounds, o.size);
+    splines.set(t, o.spectrum, o.intensity, o.angle_bounds);
 }

@@ -330,7 +330,7 @@ void Halfedge_Mesh::to_mesh(GL::Mesh& mesh, bool split_faces) const {
         }
     }
 
-    mesh = GL::Mesh(std::move(verts), std::move(idxs));
+    mesh.recreate(std::move(verts), std::move(idxs));
 }
 
 void Halfedge_Mesh::mark_dirty() {

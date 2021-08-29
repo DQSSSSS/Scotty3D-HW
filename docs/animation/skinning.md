@@ -24,8 +24,6 @@ Your implementation should have the following basic steps for each vertex:
 
 Below we have an equation representation. The ith vertex v is the new vertex position. The weight w is the weight metric computed as the inverse of distance between the ith vertex and the closest point on joint j. We multiply this term with the position of the ith vertex v with respect to joint j after joint's transformations has been applied.
 
-<!--# TODO: fix this-->
-<!--![skinnning_equations](task3_media/skinning_equations.png)-->
 <center><img src="task3_media/skinning_eqn1.png" style="height:100px">
 <img src="task3_media/skinning_eqn2.png" style="height:120px"></center>
 

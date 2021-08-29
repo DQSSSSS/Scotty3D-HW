@@ -10,6 +10,12 @@
 #include "skeleton.h"
 
 using Scene_ID = unsigned int;
+constexpr int MAX_NAME_LEN = 256;
+
+namespace PT {
+template<typename T> class BVH;
+class Object;
+} // namespace PT
 
 class Scene_Object {
 public:
@@ -51,11 +57,14 @@ public:
     void set_skel_dirty();
     void set_pose_dirty();
 
-    static const inline int max_name_len = 256;
+    void step(const PT::Object& scene, float dt) {
+    }
+
     struct Options {
-        char name[max_name_len] = {};
+        char name[MAX_NAME_LEN] = {};
         bool wireframe = false;
         bool smooth_normals = false;
+        bool render = true;
         PT::Shape_Type shape_type = PT::Shape_Type::none;
         PT::Shape shape;
     };
@@ -73,7 +82,7 @@ private:
     Halfedge_Mesh halfedge;
 
     mutable GL::Mesh _mesh, _anim_mesh;
-    mutable std::unordered_map<unsigned int, std::vector<Joint*>> vertex_joints;
+    mutable std::vector<std::vector<Joint*>> vertex_joints;
     mutable bool editable = true;
     mutable bool mesh_dirty = false;
     mutable bool skel_dirty = false, pose_dirty = false;

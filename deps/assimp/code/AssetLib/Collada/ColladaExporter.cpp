@@ -573,6 +573,10 @@ void ColladaExporter::WriteAmbienttLight(const aiLight *const light) {
         mOutput << startstr << "<pps>"
                 << colord.r << "</pps>" << endstr;
     }
+    if(colord.g > 0.0f) {
+        mOutput << startstr << "<timestep>"
+                << colord.g << "</timestep>" << endstr;
+    }
     mOutput << startstr << "<constant_attenuation>"
             << light->mAttenuationConstant
             << "</constant_attenuation>" << endstr;

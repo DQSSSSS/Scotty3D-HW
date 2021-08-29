@@ -134,8 +134,7 @@ struct Vec3 {
     }
     /// Are all members real numbers?
     bool valid() const {
-        return !(std::isinf(x) || std::isinf(y) || std::isinf(z) || std::isnan(x) ||
-                 std::isnan(y) || std::isnan(z));
+        return std::isfinite(x) && std::isfinite(y) && std::isfinite(z);
     }
 
     /// Modify vec to have unit length

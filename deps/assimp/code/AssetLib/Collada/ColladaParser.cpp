@@ -1274,6 +1274,9 @@ void ColladaParser::ReadLight(Collada::Light &pLight) {
             } else if (IsElement("pps")) {
                 pLight.mPPS = ReadFloatFromTextContent();
                 TestClosing("pps");
+            } else if (IsElement("timestep")) {
+                pLight.mdt = ReadFloatFromTextContent();
+                TestClosing("timestep");
             } else if (IsElement("falloff_exponent")) {
                 pLight.mFalloffExponent = ReadFloatFromTextContent();
                 TestClosing("falloff_exponent");

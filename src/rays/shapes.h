@@ -1,7 +1,10 @@
 
 #pragma once
 
+#include "../geometry/util.h"
 #include "../lib/mathlib.h"
+#include "../platform/gl.h"
+
 #include "trace.h"
 #include <variant>
 
@@ -55,6 +58,12 @@ public:
 
     bool operator!=(const Shape& c) const {
         return underlying != c.underlying;
+    }
+
+    GL::Mesh mesh() const {
+        return std::visit(
+            [](const PT::Sphere& sphere) { return Util::sphere_mesh(sphere.radius, 2); },
+            underlying);
     }
 
 private:

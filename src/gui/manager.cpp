@@ -239,10 +239,12 @@ void Manager::particles_edit_gui(Undo& undo, Scene_Particles& particles) {
     ImGui::DragFloat("Particles/Sec", &opt.pps, 1.0f, 0.0f, std::numeric_limits<float>::max(),
                      "%.2f");
     activate();
+    ImGui::DragFloat("Timestep", &opt.dt, 0.001f, 0.0f, std::numeric_limits<float>::max(), "%.4f");
+    activate();
     ImGui::Checkbox("Enabled", &opt.enabled);
     activate();
 
-    if(ImGui::Button("Clear")) {
+    if(ImGui::Button("Clear##particles")) {
         particles.clear();
     }
 
@@ -318,6 +320,7 @@ Mode Manager::item_options(Undo& undo, Mode cur_mode, Scene_Item& item, Pose& ol
     Pose& pose = item.pose();
 
     auto sliders = [&](Widget_Type act, std::string label, Vec3& data, float sens) {
+        label += "##" + std::to_string(item.id());
         if(ImGui::DragFloat3(label.c_str(), data.data, sens)) widgets.active = act;
         if(ImGui::IsItemActivated()) old_pose = pose;
         if(ImGui::IsItemDeactivatedAfterEdit() && old_pose != pose)
@@ -376,6 +379,7 @@ Mode Manager::item_options(Undo& undo, Mode cur_mode, Scene_Item& item, Pose& ol
                     update();
                 }
                 if(ImGui::Checkbox("Show Wireframe", &obj.opt.wireframe)) update();
+                if(ImGui::Checkbox("Render", &obj.opt.render)) update();
             }
             if(ImGui::Combo("Use Implicit Shape", (int*)&obj.opt.shape_type, PT::Shape_Type_Names,
                             (int)PT::Shape_Type::count)) {
@@ -483,11 +487,6 @@ void Manager::light_edit_gui(Undo& undo, Scene_Light& light) {
         }
         activate();
     } break;
-    case Light_Type::rectangle: {
-        ImGui::DragFloat2("Size", light.opt.size.data, 0.1f, 0.0f,
-                          std::numeric_limits<float>::max());
-        activate();
-    } break;
     default: break;
     }
 
@@ -533,9 +532,7 @@ void Manager::UIsidebar(Scene& scene, Undo& undo, float menu_height, Camera& cam
         if(wrap_button("Export Scene")) write_scene(scene);
         if(wrap_button("Clear")) {
             std::vector<Scene_ID> ids;
-            scene.for_items([&](Scene_Item& item) { 
-                ids.push_back(item.id()); 
-            });
+            scene.for_items([&](Scene_Item& item) { ids.push_back(item.id()); });
             for(auto id : ids) undo.del_obj(id);
             undo.bundle_last(ids.size());
         }
@@ -551,7 +548,7 @@ void Manager::UIsidebar(Scene& scene, Undo& undo, float menu_height, Camera& cam
             new_light_window = true;
             new_light_focus = true;
         }
-        
+
         ImGui::Separator();
     }
 
@@ -678,7 +675,7 @@ void Manager::UInew_light(Scene& scene, Undo& undo) {
             light.opt.intensity = intensity;
             light.pose = Pose::rotated(Mat4::rotate_to(direction.unit()).to_euler());
             light.dirty();
-            undo.add_light(std::move(light));
+            undo.add(std::move(light));
             new_light_window = false;
         }
         ImGui::PopID();
@@ -690,7 +687,7 @@ void Manager::UInew_light(Scene& scene, Undo& undo) {
             Scene_Light light(Light_Type::point, scene.reserve_id(), {});
             light.opt.spectrum = color;
             light.opt.intensity = intensity;
-            undo.add_light(std::move(light));
+            undo.add(std::move(light));
             new_light_window = false;
         }
         ImGui::PopID();
@@ -712,26 +709,7 @@ void Manager::UInew_light(Scene& scene, Undo& undo) {
             light.pose = Pose::rotated(Mat4::rotate_to(direction.unit()).to_euler());
             light.opt.angle_bounds = angles;
             light.dirty();
-            undo.add_light(std::move(light));
-            new_light_window = false;
-        }
-        ImGui::PopID();
-    }
-
-    if(ImGui::CollapsingHeader("Area Light (Rectangle)")) {
-        ImGui::PushID(idx++);
-        static Vec2 size = Vec2(1.0f);
-
-        ImGui::InputFloat2("Size", size.data, "%.2f");
-        size = clamp(size, Vec2(0.0f), size);
-
-        if(ImGui::Button("Add")) {
-            Scene_Light light(Light_Type::rectangle, scene.reserve_id(), {});
-            light.opt.spectrum = color;
-            light.opt.intensity = intensity;
-            light.opt.size = size;
-            light.dirty();
-            undo.add_light(std::move(light));
+            undo.add(std::move(light));
             new_light_window = false;
         }
         ImGui::PopID();
@@ -749,7 +727,7 @@ void Manager::UInew_light(Scene& scene, Undo& undo) {
                 light.opt.spectrum = color;
                 light.opt.intensity = intensity;
                 light.dirty();
-                undo.add_light(std::move(light));
+                undo.add(std::move(light));
                 new_light_window = false;
             }
             ImGui::PopID();
@@ -762,7 +740,7 @@ void Manager::UInew_light(Scene& scene, Undo& undo) {
                 light.opt.spectrum = color;
                 light.opt.intensity = intensity;
                 light.dirty();
-                undo.add_light(std::move(light));
+                undo.add(std::move(light));
                 new_light_window = false;
             }
             ImGui::PopID();
@@ -773,7 +751,7 @@ void Manager::UInew_light(Scene& scene, Undo& undo) {
             if(ImGui::Button("Add")) {
                 Scene_Light light(Light_Type::sphere, scene.reserve_id(), {});
                 load_image(light);
-                undo.add_light(std::move(light));
+                undo.add(std::move(light));
                 new_light_window = false;
             }
             ImGui::PopID();
@@ -923,7 +901,8 @@ void Manager::UIsavefirst(Scene& scene, Undo& undo) {
     Vec2 center = window_dim / 2.0f;
     ImGui::SetNextWindowPos(Vec2{center.x, center.y}, 0, Vec2{0.5f, 0.5f});
     ImGui::Begin("Save Changes?", &save_first_shown,
-                 ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
+                 ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize |
+                     ImGuiWindowFlags_AlwaysAutoResize);
     if(ImGui::Button("Yes")) {
         save_first_shown = false;
         after_save(save_scene(scene, undo));
@@ -1203,10 +1182,12 @@ void Manager::render_3d(Scene& scene, Undo& undo, Camera& camera) {
 
     animate.update(scene);
 
-    if(mode == Mode::layout || mode == Mode::render || mode == Mode::animate ||
-       mode == Mode::simulate) {
+    if(mode != Mode::model && mode != Mode::rig) {
 
-        simulate.update(scene, undo);
+        if(mode != Mode::animate && !animate.playing_or_rendering())
+            simulate.update(scene, undo);
+        else
+            simulate.update_time();
 
         scene.for_items([&, this](Scene_Item& item) {
             bool render = item.id() != layout.selected();

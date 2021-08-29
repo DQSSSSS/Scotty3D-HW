@@ -16,7 +16,8 @@ float unit() {
 }
 
 int integer(int min, int max) {
-    return (int)lerp((float)min, (float)max, unit());
+    std::uniform_int_distribution<int> d(min, max - 1);
+    return d(rng);
 }
 
 bool coin_flip(float p) {

@@ -13,8 +13,9 @@ struct Ray {
     Ray() = default;
 
     /// Create Ray from point and direction
-    explicit Ray(Vec3 point, Vec3 dir)
-        : point(point), dir(dir.unit()), dist_bounds(0.0f, std::numeric_limits<float>::max()) {
+    explicit Ray(Vec3 point, Vec3 dir,
+                 Vec2 dist_bounds = Vec2{0.0f, std::numeric_limits<float>::max()}, size_t depth = 0)
+        : point(point), dir(dir.unit()), dist_bounds(dist_bounds), depth(depth) {
     }
 
     Ray(const Ray&) = default;

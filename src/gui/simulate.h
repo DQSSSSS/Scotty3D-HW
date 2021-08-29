@@ -35,7 +35,9 @@ public:
     Mode UIsidebar(Manager& manager, Scene& scene, Undo& undo, Widgets& widgets, Scene_Maybe obj);
 
 private:
-    PT::BVH<PT::Object> scene_bvh;
+    PT::Object scene_obj;
+    bool use_bvh = true;
+
     Thread_Pool thread_pool;
     Pose old_pose;
     size_t cur_actions = 0;

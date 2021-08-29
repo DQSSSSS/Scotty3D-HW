@@ -1,24 +1,23 @@
 
 #include "../rays/bsdf.h"
 #include "../util/rand.h"
-#include "debug.h"
 
 namespace PT {
 
-Vec3 reflect(Vec3 dir) {
+static Vec3 reflect(Vec3 dir) {
 
-    // TODO (PathTracer): Task 6
+    // TODO (PathTracer): Task 5
     // Return reflection of dir about the surface normal (0,1,0).
-    return Vec3();
+    return Vec3{};
 }
 
-Vec3 refract(Vec3 out_dir, float index_of_refraction, bool& was_internal) {
+static Vec3 refract(Vec3 out_dir, float index_of_refraction, bool& was_internal) {
 
-    // TODO (PathTracer): Task 6
-    // Use Snell's Law to refract out_dir through the surface
-    // Return the refracted direction. Set was_internal to false if
+    // TODO (PathTracer): Task 5
+    // Use Snell's Law to refract out_dir through the surface.
+    // Return the refracted direction. Set was_internal to true if
     // refraction does not occur due to total internal reflection,
-    // and true otherwise.
+    // and false otherwise.
 
     // When dot(out_dir,normal=(0,1,0)) is positive, then out_dir corresponds to a
     // ray exiting the surface into vaccum (ior = 1). However, note that
@@ -26,101 +25,82 @@ Vec3 refract(Vec3 out_dir, float index_of_refraction, bool& was_internal) {
     // you want to compute the 'input' direction that would cause this output,
     // and to do so you can simply find the direction that out_dir would refract
     // _to_, as refraction is symmetric.
-    return Vec3();
+
+    return Vec3{};
 }
 
-BSDF_Sample BSDF_Lambertian::sample(Vec3 out_dir) const {
+Scatter BSDF_Lambertian::scatter(Vec3 out_dir) const {
 
-    // TODO (PathTracer): Task 5
-    // Implement lambertian BSDF. Use of BSDF_Lambertian::sampler may be useful
+    // TODO (PathTracer): Task 4
 
-    BSDF_Sample ret;
-    ret.attenuation = Spectrum(); // What is the ratio of reflected/incoming light?
-    ret.direction = Vec3();       // What direction should we sample incoming light from?
-    ret.pdf = 0.0f;               // Was was the PDF of the sampled direction?
+    // Sample the BSDF distribution using the cosine-weighted hemisphere sampler.
+    // You can use BSDF_Lambertian::evaluate() to compute attenuation.
+
+    Scatter ret;
+    ret.direction = Vec3{};
+    ret.attenuation = Spectrum{};
     return ret;
 }
 
 Spectrum BSDF_Lambertian::evaluate(Vec3 out_dir, Vec3 in_dir) const {
-    return albedo * (1.0f / PI_F);
+
+    // TODO (PathTracer): Task 4
+
+    // Compute the ratio of reflected/incoming radiance when light from in_dir
+    // is reflected through out_dir: albedo * cos(theta).
+
+    return Spectrum{};
 }
 
-BSDF_Sample BSDF_Mirror::sample(Vec3 out_dir) const {
+float BSDF_Lambertian::pdf(Vec3 out_dir, Vec3 in_dir) const {
 
-    // TODO (PathTracer): Task 6
-    // Implement mirror BSDF
+    // TODO (PathTracer): Task 4
 
-    BSDF_Sample ret;
-    ret.attenuation = Spectrum(); // What is the ratio of reflected/incoming light?
-    ret.direction = Vec3();       // What direction should we sample incoming light from?
-    ret.pdf = 0.0f; // Was was the PDF of the sampled direction? (In this case, the PMF)
+    // Compute the PDF for sampling in_dir from the cosine-weighted hemisphere distribution.
+    return 0.0f;
+}
+
+Scatter BSDF_Mirror::scatter(Vec3 out_dir) const {
+
+    // TODO (PathTracer): Task 5
+
+    Scatter ret;
+    ret.direction = Vec3();
+    ret.attenuation = Spectrum{};
     return ret;
 }
 
-Spectrum BSDF_Mirror::evaluate(Vec3 out_dir, Vec3 in_dir) const {
-    // Technically, we would return the proper reflectance
-    // if in_dir was the perfectly reflected out_dir, but given
-    // that we assume these are single exact directions in a
-    // continuous space, just assume that we never hit them
-    // _exactly_ and always return 0.
-    return {};
-}
+Scatter BSDF_Glass::scatter(Vec3 out_dir) const {
 
-BSDF_Sample BSDF_Glass::sample(Vec3 out_dir) const {
+    // TODO (PathTracer): Task 5
 
-    // TODO (PathTracer): Task 6
-
-    // Implement glass BSDF.
-    // (1) Compute Fresnel coefficient. Tip: use Schlick's approximation.
+    // (1) Compute Fresnel coefficient. Tip: Schlick's approximation.
     // (2) Reflect or refract probabilistically based on Fresnel coefficient. Tip: RNG::coin_flip
     // (3) Compute attenuation based on reflectance or transmittance
 
     // Be wary of your eta1/eta2 ratio - are you entering or leaving the surface?
+    // What happens upon total internal reflection?
 
-    BSDF_Sample ret;
-    ret.attenuation = Spectrum(); // What is the ratio of reflected/incoming light?
-    ret.direction = Vec3();       // What direction should we sample incoming light from?
-    ret.pdf = 0.0f; // Was was the PDF of the sampled direction? (In this case, the PMF)
+    Scatter ret;
+    ret.direction = Vec3();
+    ret.attenuation = Spectrum{};
     return ret;
 }
 
-Spectrum BSDF_Glass::evaluate(Vec3 out_dir, Vec3 in_dir) const {
-    // As with BSDF_Mirror, just assume that we never hit the correct
-    // directions _exactly_ and always return 0.
-    return {};
-}
+Scatter BSDF_Refract::scatter(Vec3 out_dir) const {
 
-BSDF_Sample BSDF_Diffuse::sample(Vec3 out_dir) const {
-    BSDF_Sample ret;
-    ret.direction = sampler.sample(ret.pdf);
-    ret.emissive = radiance;
-    ret.attenuation = {};
+    // OPTIONAL (PathTracer): Task 5
+
+    // When debugging BSDF_Glass, it may be useful to compare to a pure-refraction BSDF
+
+    Scatter ret;
+    ret.direction = Vec3();
+    ret.attenuation = Spectrum{};
     return ret;
 }
 
-Spectrum BSDF_Diffuse::evaluate(Vec3 out_dir, Vec3 in_dir) const {
-    // No incoming light is reflected; only emitted
-    return {};
-}
-
-BSDF_Sample BSDF_Refract::sample(Vec3 out_dir) const {
-
-    // TODO (PathTracer): Task 6
-    // Implement pure refraction BSDF.
-
-    // Be wary of your eta1/eta2 ratio - are you entering or leaving the surface?
-
-    BSDF_Sample ret;
-    ret.attenuation = Spectrum(); // What is the ratio of reflected/incoming light?
-    ret.direction = Vec3();       // What direction should we sample incoming light from?
-    ret.pdf = 0.0f; // Was was the PDF of the sampled direction? (In this case, the PMF)
-    return ret;
-}
-
-Spectrum BSDF_Refract::evaluate(Vec3 out_dir, Vec3 in_dir) const {
-    // As with BSDF_Mirror, just assume that we never hit the correct
-    // directions _exactly_ and always return 0.
-    return {};
+Spectrum BSDF_Diffuse::emissive() const {
+    return radiance;
 }
 
 } // namespace PT

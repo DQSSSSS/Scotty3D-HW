@@ -11,7 +11,7 @@
 #include "object.h"
 #include "pose.h"
 
-enum class Light_Type : int { directional, sphere, hemisphere, point, spot, rectangle, count };
+enum class Light_Type : int { directional, sphere, hemisphere, point, spot, count };
 extern const char* Light_Type_Names[(int)Light_Type::count];
 
 class Scene_Light {
@@ -41,22 +41,23 @@ public:
     void emissive_clear();
     bool is_env() const;
 
-    static const inline int max_name_len = 256;
     struct Options {
         Light_Type type = Light_Type::point;
-        char name[max_name_len] = {};
+        char name[MAX_NAME_LEN] = {};
         Spectrum spectrum = Spectrum(1.0f);
         float intensity = 1.0f;
         bool has_emissive_map = false;
         Vec2 angle_bounds = Vec2(30.0f, 35.0f);
-        Vec2 size = Vec2(1.0f);
     };
 
     struct Anim_Light {
         void at(float t, Options& o) const;
         void set(float t, Options o);
-        Splines<Spectrum, float, Vec2, Vec2> splines;
+        Splines<Spectrum, float, Vec2> splines;
     };
+
+    void step(const PT::Object& scene, float dt) {
+    }
 
     Options opt;
     Pose pose;

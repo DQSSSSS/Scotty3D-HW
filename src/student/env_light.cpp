@@ -1,60 +1,63 @@
 
 #include "../rays/env_light.h"
-#include "debug.h"
 
 #include <limits>
 
 namespace PT {
 
-Light_Sample Env_Map::sample() const {
-
-    Light_Sample ret;
-    ret.distance = std::numeric_limits<float>::infinity();
+Vec3 Env_Map::sample() const {
 
     // TODO (PathTracer): Task 7
-    // Uniformly sample the sphere. Tip: implement Samplers::Sphere::Uniform
-    Samplers::Sphere::Uniform uniform;
-    ret.direction = uniform.sample(ret.pdf);
 
-    // Once you've implemented Samplers::Sphere::Image, remove the above and
-    // uncomment this line to use importance sampling instead.
-    // ret.direction = sampler.sample(ret.pdf);
+    // First, implement Samplers::Sphere::Uniform so the following line works.
+    // Second, implement Samplers::Sphere::Image and swap to image_sampler
 
-    ret.radiance = sample_direction(ret.direction);
-    return ret;
+    return uniform_sampler.sample();
 }
 
-Spectrum Env_Map::sample_direction(Vec3 dir) const {
+float Env_Map::pdf(Vec3 dir) const {
 
     // TODO (PathTracer): Task 7
-    // Find the incoming light along a given direction by finding the corresponding
-    // place in the enviornment image. You should bi-linearly interpolate the value
-    // between the 4 image pixels nearest to the exact direction.
-    return Spectrum();
+
+    // First, return the pdf for a uniform spherical distribution.
+    // Second, swap to image_sampler.pdf().
+
+    return 0.0f;
 }
 
-Light_Sample Env_Hemisphere::sample() const {
-    Light_Sample ret;
-    ret.direction = sampler.sample(ret.pdf);
-    ret.radiance = radiance;
-    ret.distance = std::numeric_limits<float>::infinity();
-    return ret;
+Spectrum Env_Map::evaluate(Vec3 dir) const {
+
+    // TODO (PathTracer): Task 7
+
+    // Compute emitted radiance along a given direction by finding the corresponding
+    // pixels in the enviornment image. You should bi-linearly interpolate the value
+    // between the 4 nearest pixels.
+
+    return Spectrum{};
 }
 
-Spectrum Env_Hemisphere::sample_direction(Vec3 dir) const {
+Vec3 Env_Hemisphere::sample() const {
+    return sampler.sample();
+}
+
+float Env_Hemisphere::pdf(Vec3 dir) const {
+    return 1.0f / (2.0f * PI_F);
+}
+
+Spectrum Env_Hemisphere::evaluate(Vec3 dir) const {
     if(dir.y > 0.0f) return radiance;
     return {};
 }
 
-Light_Sample Env_Sphere::sample() const {
-    Light_Sample ret;
-    ret.direction = sampler.sample(ret.pdf);
-    ret.radiance = radiance;
-    ret.distance = std::numeric_limits<float>::infinity();
-    return ret;
+Vec3 Env_Sphere::sample() const {
+    return sampler.sample();
 }
 
-Spectrum Env_Sphere::sample_direction(Vec3) const {
+float Env_Sphere::pdf(Vec3 dir) const {
+    return 1.0f / (4.0f * PI_F);
+}
+
+Spectrum Env_Sphere::evaluate(Vec3) const {
     return radiance;
 }
 

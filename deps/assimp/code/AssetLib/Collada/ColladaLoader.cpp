@@ -389,6 +389,7 @@ void ColladaLoader::BuildLightsForNode(const ColladaParser &pParser, const Colla
         if (out->mType == aiLightSource_AMBIENT) {
             out->mColorDiffuse = out->mColorSpecular = aiColor3D(0, 0, 0);
             out->mColorDiffuse.r = srcLight->mPPS;
+            out->mColorDiffuse.g = srcLight->mdt;
             out->mColorAmbient = srcLight->mColor * srcLight->mIntensity;
         } else {
             // collada doesn't differentiate between these color types

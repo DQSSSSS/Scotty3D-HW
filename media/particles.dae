@@ -42,6 +42,7 @@
         <ambient>
           <color sid="color">0.38141674 0.58814317 0.85051548</color>
           <pps>1000</pps>
+          <timestep>0.01</timestep>
           <constant_attenuation>0.029999999</constant_attenuation>
           <linear_attenuation>5</linear_attenuation>
           <quadratic_attenuation>17.280001</quadratic_attenuation>

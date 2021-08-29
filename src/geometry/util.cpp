@@ -203,7 +203,7 @@ Data cone(float bradius, float tradius, float height, int sides, bool caps) {
 
     float t = 0.0f;
     float step = _2pi / n_sides;
-    
+
     while(vert <= n_sides) {
         vertices[vert] = Vec3(std::cos(t) * bradius, 0.0f, std::sin(t) * bradius);
         vert++;
@@ -217,7 +217,7 @@ Data cone(float bradius, float tradius, float height, int sides, bool caps) {
         vert++;
         t += step;
     }
-    
+
     size_t v = 0;
     t = 0.0f;
     while(vert <= vertices.size() - 4) {

@@ -11,12 +11,10 @@
 
 namespace PT {
 
-struct BSDF_Sample {
+struct Scatter {
 
-    Spectrum emissive;
     Spectrum attenuation;
     Vec3 direction;
-    float pdf;
 
     void transform(const Mat4& T) {
         direction = T.rotate(direction);
@@ -25,14 +23,15 @@ struct BSDF_Sample {
 
 struct BSDF_Lambertian {
 
-    BSDF_Lambertian(Spectrum albedo) : albedo(albedo) {
+    BSDF_Lambertian(Spectrum albedo) : albedo(albedo / PI_F) {
     }
 
-    BSDF_Sample sample(Vec3 out_dir) const;
+    Scatter scatter(Vec3 out_dir) const;
     Spectrum evaluate(Vec3 out_dir, Vec3 in_dir) const;
+    float pdf(Vec3 out_Dir, Vec3 in_dir) const;
 
     Spectrum albedo;
-    Samplers::Hemisphere::Uniform sampler;
+    Samplers::Hemisphere::Cosine sampler;
 };
 
 struct BSDF_Mirror {
@@ -40,8 +39,7 @@ struct BSDF_Mirror {
     BSDF_Mirror(Spectrum reflectance) : reflectance(reflectance) {
     }
 
-    BSDF_Sample sample(Vec3 out_dir) const;
-    Spectrum evaluate(Vec3 out_dir, Vec3 in_dir) const;
+    Scatter scatter(Vec3 out_dir) const;
 
     Spectrum reflectance;
 };
@@ -52,8 +50,7 @@ struct BSDF_Refract {
         : transmittance(transmittance), index_of_refraction(ior) {
     }
 
-    BSDF_Sample sample(Vec3 out_dir) const;
-    Spectrum evaluate(Vec3 out_dir, Vec3 in_dir) const;
+    Scatter scatter(Vec3 out_dir) const;
 
     Spectrum transmittance;
     float index_of_refraction;
@@ -65,8 +62,7 @@ struct BSDF_Glass {
         : transmittance(transmittance), reflectance(reflectance), index_of_refraction(ior) {
     }
 
-    BSDF_Sample sample(Vec3 out_dir) const;
-    Spectrum evaluate(Vec3 out_dir, Vec3 in_dir) const;
+    Scatter scatter(Vec3 out_dir) const;
 
     Spectrum transmittance;
     Spectrum reflectance;
@@ -78,11 +74,9 @@ struct BSDF_Diffuse {
     BSDF_Diffuse(Spectrum radiance) : radiance(radiance) {
     }
 
-    BSDF_Sample sample(Vec3 out_dir) const;
-    Spectrum evaluate(Vec3 out_dir, Vec3 in_dir) const;
+    Spectrum emissive() const;
 
     Spectrum radiance;
-    Samplers::Hemisphere::Uniform sampler;
 };
 
 class BSDF {
@@ -103,22 +97,41 @@ public:
     BSDF& operator=(BSDF&& src) = default;
     BSDF(BSDF&& src) = default;
 
-    BSDF_Sample sample(Vec3 out_dir) const {
-        return std::visit(overloaded{[&out_dir](const auto& b) { return b.sample(out_dir); }},
+    Scatter scatter(Vec3 out_dir) const {
+        return std::visit(overloaded{[](const BSDF_Diffuse& d) -> Scatter {
+                                         die("You scattered an emissive BSDF!");
+                                     },
+                                     [out_dir](const auto& b) { return b.scatter(out_dir); }},
                           underlying);
     }
 
     Spectrum evaluate(Vec3 out_dir, Vec3 in_dir) const {
         return std::visit(
-            overloaded{[&out_dir, &in_dir](const auto& b) { return b.evaluate(out_dir, in_dir); }},
+            overloaded{
+                [out_dir, in_dir](const BSDF_Lambertian& l) { return l.evaluate(out_dir, in_dir); },
+                [](const auto&) -> Spectrum { die("You evaluated a delta BSDF!"); }},
             underlying);
+    }
+
+    float pdf(Vec3 out_dir, Vec3 in_dir) const {
+        return std::visit(
+            overloaded{
+                [out_dir, in_dir](const BSDF_Lambertian& l) { return l.pdf(out_dir, in_dir); },
+                [](const auto&) -> float { die("You evaluated the pdf of a delta BSDF!"); }},
+            underlying);
+    }
+
+    Spectrum emissive() const {
+        return std::visit(overloaded{[](const BSDF_Diffuse& d) { return d.emissive(); },
+                                     [](const auto& b) { return Spectrum{}; }},
+                          underlying);
     }
 
     bool is_discrete() const {
         return std::visit(overloaded{[](const BSDF_Lambertian&) { return false; },
+                                     [](const BSDF_Diffuse&) { return false; },
                                      [](const BSDF_Mirror&) { return true; },
                                      [](const BSDF_Glass&) { return true; },
-                                     [](const BSDF_Diffuse&) { return false; },
                                      [](const BSDF_Refract&) { return true; }},
                           underlying);
     }
@@ -135,8 +148,5 @@ public:
 private:
     std::variant<BSDF_Lambertian, BSDF_Mirror, BSDF_Glass, BSDF_Diffuse, BSDF_Refract> underlying;
 };
-
-Vec3 reflect(Vec3 dir);
-Vec3 refract(Vec3 out_dir, float index_of_refraction, bool& was_internal);
 
 } // namespace PT

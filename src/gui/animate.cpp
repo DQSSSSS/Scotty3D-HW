@@ -268,7 +268,7 @@ bool Animate::select(Scene& scene, Widgets& widgets, Scene_ID selected, Scene_ID
 
         if(handle_select) {
 
-            Scene_Object& obj = scene.get_obj(selected);
+            Scene_Object& obj = scene.get<Scene_Object>(selected);
             Vec3 base = obj.pose.transform() * (handle_select->target + obj.armature.base());
             widgets.start_drag(base, cam, spos, dir);
             old_pose = {};
@@ -278,7 +278,7 @@ bool Animate::select(Scene& scene, Widgets& widgets, Scene_ID selected, Scene_ID
 
         } else if(joint_select) {
 
-            Scene_Object& obj = scene.get_obj(selected);
+            Scene_Object& obj = scene.get<Scene_Object>(selected);
             Vec3 base = obj.pose.transform() * obj.armature.posed_base_of(joint_select);
             widgets.start_drag(base, cam, spos, dir);
 
@@ -357,6 +357,8 @@ void Animate::timeline(Manager& manager, Undo& undo, Scene& scene, Scene_Maybe o
             playing = false;
         }
     }
+
+    if(ui_render.in_progress()) playing = false;
 
     ImGui::SameLine();
     if(ImGui::Button("Render")) {
@@ -508,7 +510,7 @@ void Animate::timeline(Manager& manager, Undo& undo, Scene& scene, Scene_Maybe o
     }
 
     ImGui::SameLine();
-    if(ImGui::Button("Move Right") && current_frame < max_frame-1) {
+    if(ImGui::Button("Move Right") && current_frame < max_frame - 1) {
         if(camera_selected && anim_camera.splines.has((float)current_frame)) {
             undo.anim_clear_camera(anim_camera, (float)current_frame);
             current_frame++;
@@ -746,17 +748,24 @@ void Animate::invalidate(Joint* j) {
     if(joint_select == j) joint_select = nullptr;
 }
 
+bool Animate::playing_or_rendering() {
+    return playing || ui_render.in_progress();
+}
+
 void Animate::update(Scene& scene) {
 
     Uint64 time = SDL_GetPerformanceCounter();
 
     if(playing) {
+
         if((time - last_frame) * frame_rate / SDL_GetPerformanceFrequency()) {
+
             if(current_frame == max_frame - 1) {
                 playing = false;
                 current_frame = 0;
             } else {
                 current_frame++;
+                step_sim(scene);
             }
             last_frame = time;
         }

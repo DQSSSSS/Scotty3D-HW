@@ -11,6 +11,8 @@
 
 #include "widgets.h"
 
+struct Launch_Settings;
+
 namespace Gui {
 
 enum class Mode;
@@ -20,8 +22,7 @@ class Render {
 public:
     Render(Scene& scene, Vec2 dim);
 
-    std::string headless_render(Animate& animate, Scene& scene, std::string output, bool a, int w,
-                                int h, int s, int ls, int d, float exp, bool w_from_ar);
+    std::string headless_render(Animate& animate, Scene& scene, const Launch_Settings& set);
     std::pair<float, float> completion_time() const;
 
     bool keydown(Widgets& widgets, SDL_Keysym key);

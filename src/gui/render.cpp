@@ -3,6 +3,7 @@
 #include <nfd/nfd.h>
 #include <sf_libs/stb_image_write.h>
 
+#include "../app.h"
 #include "../platform/platform.h"
 #include "../scene/renderer.h"
 
@@ -95,8 +96,8 @@ Mode Render::UIsidebar(Manager& manager, Undo& undo, Scene& scene, Scene_Maybe o
 
     ImGui::Text("Visualize");
 
-    ImGui::Checkbox("Logged rays", &render_ray_log);
-    ImGui::Checkbox("BVH", &visualize_bvh);
+    ImGui::Checkbox("Draw BVH", &visualize_bvh);
+    ImGui::Checkbox("Draw rays", &render_ray_log);
 
     bool update_bvh = false;
 
@@ -128,12 +129,12 @@ std::pair<float, float> Render::completion_time() const {
     return ui_render.completion_time();
 }
 
-std::string Render::headless_render(Animate& animate, Scene& scene, std::string output, bool a,
-                                    int w, int h, int s, int ls, int d, float exp, bool w_from_ar) {
-    if(w_from_ar) {
-        w = (int)std::ceil(ui_camera.get_ar() * h);
+std::string Render::headless_render(Animate& animate, Scene& scene, const Launch_Settings& s0) {
+    Launch_Settings set = s0;
+    if(set.w_from_ar) {
+        set.w = (int)std::ceil(ui_camera.get_ar() * set.h);
     }
-    return ui_render.headless(animate, scene, ui_camera.get(), output, a, w, h, s, ls, d, exp);
+    return ui_render.headless(animate, scene, ui_camera.get(), set);
 }
 
 } // namespace Gui

@@ -5,6 +5,7 @@
 #include "../platform/gl.h"
 
 #include "bvh.h"
+#include "list.h"
 #include "trace.h"
 
 namespace PT {
@@ -23,6 +24,9 @@ public:
         return size_t(0);
     }
 
+    Vec3 sample(Vec3 from) const;
+    float pdf(Ray ray, const Mat4& T, const Mat4& iT) const;
+
 private:
     Triangle(Tri_Mesh_Vert* verts, unsigned int v0, unsigned int v1, unsigned int v2);
 
@@ -34,7 +38,7 @@ private:
 class Tri_Mesh {
 public:
     Tri_Mesh() = default;
-    Tri_Mesh(const GL::Mesh& mesh);
+    Tri_Mesh(const GL::Mesh& mesh, bool use_bvh = true);
 
     Tri_Mesh(Tri_Mesh&& src) = default;
     Tri_Mesh& operator=(Tri_Mesh&& src) = default;
@@ -48,11 +52,16 @@ public:
 
     size_t visualize(GL::Lines& lines, GL::Lines& active, size_t level, const Mat4& trans) const;
 
-    void build(const GL::Mesh& mesh);
+    void build(const GL::Mesh& mesh, bool use_bvh = true);
+
+    Vec3 sample(Vec3 from) const;
+    float pdf(Ray ray, const Mat4& T, const Mat4& iT) const;
 
 private:
+    bool use_bvh = true;
     std::vector<Tri_Mesh_Vert> verts;
-    BVH<Triangle> triangles;
+    BVH<Triangle> triangle_bvh;
+    List<Triangle> triangle_list;
 };
 
 } // namespace PT

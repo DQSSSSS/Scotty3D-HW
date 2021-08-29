@@ -27,6 +27,7 @@ void BVH<Primitive>::build(std::vector<Primitive>&& prims, size_t max_leaf_size)
     // to create a new node, don't allocate one yourself - use BVH::new_node, which
     // returns the index of a newly added node.
 
+    assert(false);
     // Keep these
     nodes.clear();
     primitives = std::move(prims);
@@ -153,7 +154,7 @@ size_t BVH<Primitive>::visualize(GL::Lines& lines, GL::Lines& active, size_t lev
         } else {
             for(size_t i = node.start; i < node.start + node.size; i++) {
                 size_t c = primitives[i].visualize(lines, active, level - lvl, trans);
-                max_level = std::max(c, max_level);
+                max_level = std::max(c + lvl, max_level);
             }
         }
     }

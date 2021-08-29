@@ -17,8 +17,9 @@ struct Env_Hemisphere {
     Env_Hemisphere(Spectrum r) : radiance(r) {
     }
 
-    Light_Sample sample() const;
-    Spectrum sample_direction(Vec3 dir) const;
+    Vec3 sample() const;
+    Spectrum evaluate(Vec3 dir) const;
+    float pdf(Vec3 dir) const;
 
     Spectrum radiance;
     Samplers::Hemisphere::Uniform sampler;
@@ -29,8 +30,9 @@ struct Env_Sphere {
     Env_Sphere(Spectrum r) : radiance(r) {
     }
 
-    Light_Sample sample() const;
-    Spectrum sample_direction(Vec3 dir) const;
+    Vec3 sample() const;
+    Spectrum evaluate(Vec3 dir) const;
+    float pdf(Vec3 dir) const;
 
     Spectrum radiance;
     Samplers::Sphere::Uniform sampler;
@@ -38,14 +40,16 @@ struct Env_Sphere {
 
 struct Env_Map {
 
-    Env_Map(HDR_Image&& img) : image(std::move(img)), sampler(image) {
+    Env_Map(HDR_Image&& img) : image(std::move(img)), image_sampler(image) {
     }
 
-    Light_Sample sample() const;
-    Spectrum sample_direction(Vec3 dir) const;
+    Vec3 sample() const;
+    Spectrum evaluate(Vec3 dir) const;
+    float pdf(Vec3 dir) const;
 
     HDR_Image image;
-    Samplers::Sphere::Image sampler;
+    Samplers::Sphere::Uniform uniform_sampler;
+    Samplers::Sphere::Image image_sampler;
 };
 
 class Env_Light {
@@ -62,19 +66,16 @@ public:
     Env_Light& operator=(Env_Light&& src) = default;
     Env_Light(Env_Light&& src) = default;
 
-    Light_Sample sample(Vec3) const {
-        return std::visit(overloaded{[](const Env_Hemisphere& h) { return h.sample(); },
-                                     [](const Env_Sphere& h) { return h.sample(); },
-                                     [](const Env_Map& h) { return h.sample(); }},
-                          underlying);
+    Vec3 sample() const {
+        return std::visit([](const auto& h) { return h.sample(); }, underlying);
     }
 
-    Spectrum sample_direction(Vec3 dir) const {
-        return std::visit(
-            overloaded{[&dir](const Env_Hemisphere& h) { return h.sample_direction(dir); },
-                       [&dir](const Env_Sphere& h) { return h.sample_direction(dir); },
-                       [&dir](const Env_Map& h) { return h.sample_direction(dir); }},
-            underlying);
+    float pdf(Vec3 dir) const {
+        return std::visit([dir](const auto& h) { return h.pdf(dir); }, underlying);
+    }
+
+    Spectrum evaluate(Vec3 dir) const {
+        return std::visit([&dir](const auto& h) { return h.evaluate(dir); }, underlying);
     }
 
     bool is_discrete() const {

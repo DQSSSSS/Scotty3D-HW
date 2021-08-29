@@ -1,6 +1,4 @@
 
-#include <sstream>
-
 #include "object.h"
 #include "renderer.h"
 
@@ -14,9 +12,9 @@ Scene_Object::Scene_Object(Scene_ID id, Pose p, GL::Mesh&& m, std::string n)
     editable = false;
 
     if(n.size()) {
-        snprintf(opt.name, max_name_len, "%s", n.c_str());
+        snprintf(opt.name, MAX_NAME_LEN, "%s", n.c_str());
     } else {
-        snprintf(opt.name, max_name_len, "Object %d", id);
+        snprintf(opt.name, MAX_NAME_LEN, "Object %d", id);
     }
 }
 
@@ -26,9 +24,9 @@ Scene_Object::Scene_Object(Scene_ID id, Pose p, Halfedge_Mesh&& m, std::string n
     set_mesh_dirty();
 
     if(n.size()) {
-        snprintf(opt.name, max_name_len, "%s", n.c_str());
+        snprintf(opt.name, MAX_NAME_LEN, "%s", n.c_str());
     } else {
-        snprintf(opt.name, max_name_len, "Object %d", id);
+        snprintf(opt.name, MAX_NAME_LEN, "Object %d", id);
     }
 
     sync_anim_mesh();
@@ -36,9 +34,7 @@ Scene_Object::Scene_Object(Scene_ID id, Pose p, Halfedge_Mesh&& m, std::string n
 
 const GL::Mesh& Scene_Object::posed_mesh() {
     sync_anim_mesh();
-    if(armature.has_bones()) {
-        return _anim_mesh;
-    }
+    if(armature.has_bones()) return _anim_mesh;
     return _mesh;
 }
 
@@ -53,14 +49,7 @@ const GL::Mesh& Scene_Object::mesh() {
 
 void Scene_Object::try_make_editable(PT::Shape_Type prev) {
 
-    switch(prev) {
-    case PT::Shape_Type::sphere: {
-        _mesh = Util::sphere_mesh(opt.shape.get<PT::Sphere>().radius, 2);
-    } break;
-
-    case PT::Shape_Type::none:
-    case PT::Shape_Type::count: break;
-    }
+    _mesh = opt.shape.mesh();
 
     std::string err = halfedge.from_mesh(_mesh);
     if(err.empty()) {
@@ -189,6 +178,8 @@ BBox Scene_Object::bbox() {
 
 void Scene_Object::render(const Mat4& view, bool solid, bool depth_only, bool posed, bool do_anim) {
 
+    if(!opt.render) return;
+
     if(do_anim)
         sync_anim_mesh();
     else
@@ -196,7 +187,7 @@ void Scene_Object::render(const Mat4& view, bool solid, bool depth_only, bool po
 
     Renderer::MeshOpt opts;
     opts.id = _id;
-    opts.solid_color = solid;
+    opts.solid_color = solid || material.opt.type == Material_Type::diffuse_light;
     opts.depth_only = depth_only;
     opts.color = material.layout_color();
     opts.sel_color = material.layout_color();
@@ -224,5 +215,6 @@ void Scene_Object::render(const Mat4& view, bool solid, bool depth_only, bool po
 
 bool operator!=(const Scene_Object::Options& l, const Scene_Object::Options& r) {
     return std::string(l.name) != std::string(r.name) || l.shape_type != r.shape_type ||
-           l.smooth_normals != r.smooth_normals || l.wireframe != r.wireframe || l.shape != r.shape;
+           l.smooth_normals != r.smooth_normals || l.wireframe != r.wireframe ||
+           l.shape != r.shape || l.render != r.render;
 }

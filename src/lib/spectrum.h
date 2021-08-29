@@ -5,8 +5,6 @@
 #include <cmath>
 #include <ostream>
 
-#define GAMMA 2.1f
-
 struct Spectrum {
 
     Spectrum() {
@@ -49,19 +47,38 @@ struct Spectrum {
     static Spectrum direction(Vec3 v) {
         v.normalize();
         Spectrum s(std::abs(v.x), std::abs(v.y), std::abs(v.z));
-        s.make_linear();
+        s.to_linear();
         return s;
     }
 
-    void make_srgb() {
-        r = std::pow(r, 1.0f / GAMMA);
-        g = std::pow(g, 1.0f / GAMMA);
-        b = std::pow(b, 1.0f / GAMMA);
+    static float to_linear(float f) {
+        if(f > 0.04045f) {
+            return std::pow((f + 0.055f) / 1.055f, 2.4f);
+        } else {
+            return f / 12.92f;
+        }
     }
-    void make_linear() {
-        r = std::pow(r, GAMMA);
-        g = std::pow(g, GAMMA);
-        b = std::pow(b, GAMMA);
+    static float to_srgb(float f) {
+        if(f > 0.0031308f) {
+            return 1.055f * (std::pow(f, (1.0f / 2.4f))) - 0.055f;
+        } else {
+            return f * 12.92f;
+        }
+    }
+
+    Spectrum to_srgb() const {
+        Spectrum ret;
+        ret.r = to_srgb(r);
+        ret.g = to_srgb(g);
+        ret.b = to_srgb(b);
+        return ret;
+    }
+    Spectrum to_linear() const {
+        Spectrum ret;
+        ret.r = to_linear(r);
+        ret.g = to_linear(g);
+        ret.b = to_linear(b);
+        return ret;
     }
 
     Spectrum operator+(Spectrum v) const {
@@ -96,8 +113,7 @@ struct Spectrum {
     }
 
     bool valid() const {
-        return !(std::isinf(r) || std::isinf(g) || std::isinf(b) || std::isnan(r) ||
-                 std::isnan(g) || std::isnan(b));
+        return std::isfinite(r) && std::isfinite(g) && std::isfinite(b);
     }
 
     Vec3 to_vec() const {
