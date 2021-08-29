@@ -35,7 +35,7 @@ Additionally, any object can be made into an emissive area light by changing its
 
 In Render mode, simply check the box for "Logged Rays", and you would be able to see the camera rays that you generated in task 1 when you start render.
 
-![ray](log_ray.png)
+![ray](ray_log.png)
 
 ## Visualize BVH
 
