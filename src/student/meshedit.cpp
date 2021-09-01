@@ -106,10 +106,11 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(Halfedge_Mesh:
     bevel_face_positions come in: these functions are called repeatedly as you
     move your mouse, the position of which determins the normal and tangent offset
     parameters. These functions are also passed an array of the original vertex
-    positions: for  bevel_vertex, it has one element, the original vertex position,
-    for bevel_edge,  two for the two vertices, and for bevel_face, it has the original
-    position of each vertex in halfedge order. You should use these positions, as well
-    as the normal and tangent offset fields to assign positions to the new vertices.
+    positions: for bevel_vertex, it has one element, the original vertex position,
+    for bevel_edge, two for the two vertices, and for bevel_face, it has the original
+    position of each vertex in order starting from face->halfedge. You should use these 
+    positions, as well as the normal and tangent offset fields to assign positions to 
+    the new vertices.
 
     Finally, note that the normal and tangent offsets are not relative values - you
     should compute a particular new position from them, not a delta to apply.
@@ -118,8 +119,8 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(Halfedge_Mesh:
 /*
     This method should replace the vertex v with a face, corresponding to
     a bevel operation. It should return the new face.  NOTE: This method is
-    responsible for updating the *connectivity* of the mesh only---it does not
-    need to update the vertex positions.  These positions will be updated in
+    only responsible for updating the *connectivity* of the mesh---it does not
+    need to update the vertex positions. These positions will be updated in
     Halfedge_Mesh::bevel_vertex_positions (which you also have to
     implement!)
 */
@@ -136,7 +137,7 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::bevel_vertex(Halfedge_Mesh:
     This method should replace the edge e with a face, corresponding to a
     bevel operation. It should return the new face. NOTE: This method is
     responsible for updating the *connectivity* of the mesh only---it does not
-    need to update the vertex positions.  These positions will be updated in
+    need to update the vertex positions. These positions will be updated in
     Halfedge_Mesh::bevel_edge_positions (which you also have to
     implement!)
 */
@@ -204,8 +205,8 @@ void Halfedge_Mesh::bevel_vertex_positions(const std::vector<Vec3>& start_positi
     (in the orig array) to compute an offset vertex position.
 
     Note that there is a 1-to-1 correspondence between halfedges in
-    newHalfedges and vertex positions
-    in orig.  So, you can write loops of the form
+    newHalfedges and vertex positions in start_positions. So, you can write 
+    loops of the form:
 
     for(size_t i = 0; i < new_halfedges.size(); i++)
     {
@@ -241,8 +242,8 @@ void Halfedge_Mesh::bevel_edge_positions(const std::vector<Vec3>& start_position
     position.
 
     Note that there is a 1-to-1 correspondence between halfedges in
-    new_halfedges and vertex positions
-    in orig. So, you can write loops of the form
+    new_halfedges and vertex positions in start_positions. So, you can write 
+    loops of the form:
 
     for(size_t i = 0; i < new_halfedges.size(); i++)
     {
@@ -304,7 +305,7 @@ void Halfedge_Mesh::triangulate() {
 
   Step II: Assign a unique index (starting at 0) to each vertex, edge, and
         face in the original mesh. These indices will be the indices of the
-        vertices in the new (subdivided mesh).  They do not have to be assigned
+        vertices in the new (subdivided) mesh. They do not have to be assigned
         in any particular order, so long as no index is shared by more than one
         mesh element, and the total number of indices is equal to V+E+F, i.e.,
         the total number of vertices plus edges plus faces in the original mesh.
@@ -351,7 +352,7 @@ void Halfedge_Mesh::linear_subdivide_positions() {
     into quads (by inserting a vertex at the face midpoint and each
     of the edge midpoints).  The new vertex positions will be stored
     in the members Vertex::new_pos, Edge::new_pos, and
-    Face::new_pos.  The values of the positions are based on
+    Face::new_pos. The values of the positions are based on
     the Catmull-Clark rules for subdivision.
 
     Note: this will only be called on meshes without boundary
@@ -372,53 +373,39 @@ void Halfedge_Mesh::catmullclark_subdivide_positions() {
 }
 
 /*
-        This routine should increase the number of triangles in the mesh
-        using Loop subdivision. Note: this is will only be called on triangle meshes.
+    This routine should increase the number of triangles in the mesh
+    using Loop subdivision. Note: this is will only be called on triangle meshes.
 */
 void Halfedge_Mesh::loop_subdivide() {
 
-    // Compute new positions for all the vertices in the input mesh, using
-    // the Loop subdivision rule, and store them in Vertex::new_pos.
-    // -> At this point, we also want to mark each vertex as being a vertex of the
-    //    original mesh. Use Vertex::is_new for this.
-    // -> Next, compute the updated vertex positions associated with edges, and
-    //    store it in Edge::new_pos.
-    // -> Next, we're going to split every edge in the mesh, in any order.  For
-    //    future reference, we're also going to store some information about which
-    //    subdivided edges come from splitting an edge in the original mesh, and
-    //    which edges are new, by setting the flat Edge::is_new. Note that in this
-    //    loop, we only want to iterate over edges of the original mesh.
-    //    Otherwise, we'll end up splitting edges that we just split (and the
-    //    loop will never end!)
-    // -> Now flip any new edge that connects an old and new vertex.
-    // -> Finally, copy the new vertex positions into final Vertex::pos.
-
-    // Each vertex and edge of the original surface can be associated with a
-    // vertex in the new (subdivided) surface.
+    // Each vertex and edge of the original mesh can be associated with a
+    // vertex in the new (subdivided) mesh.
     // Therefore, our strategy for computing the subdivided vertex locations is to
     // *first* compute the new positions
-    // using the connectivity of the original (coarse) mesh; navigating this mesh
+    // using the connectivity of the original (coarse) mesh. Navigating this mesh
     // will be much easier than navigating
     // the new subdivided (fine) mesh, which has more elements to traverse.  We
     // will then assign vertex positions in
     // the new mesh based on the values we computed for the original mesh.
-
-    // Compute updated positions for all the vertices in the original mesh, using
-    // the Loop subdivision rule.
-
-    // Next, compute the updated vertex positions associated with edges.
-
-    // Next, we're going to split every edge in the mesh, in any order. For
-    // future reference, we're also going to store some information about which
-    // subdivided edges come from splitting an edge in the original mesh, and
-    // which edges are new.
-    // In this loop, we only want to iterate over edges of the original
-    // mesh---otherwise, we'll end up splitting edges that we just split (and
-    // the loop will never end!)
-
-    // Finally, flip any new edge that connects an old and new vertex.
-
-    // Copy the updated vertex positions to the subdivided mesh.
+    
+    // Compute new positions for all the vertices in the input mesh using
+    // the Loop subdivision rule and store them in Vertex::new_pos.
+    //    At this point, we also want to mark each vertex as being a vertex of the
+    //    original mesh. Use Vertex::is_new for this.
+    
+    // Next, compute the subdivided vertex positions associated with edges, and
+    // store them in Edge::new_pos.
+    
+    // Next, we're going to split every edge in the mesh, in any order.
+    // We're also going to distinguish subdivided edges that came from splitting 
+    // an edge in the original mesh from new edges by setting the boolean Edge::is_new. 
+    // Note that in this loop, we only want to iterate over edges of the original mesh.
+    // Otherwise, we'll end up splitting edges that we just split (and the
+    // loop will never end!)
+    
+    // Now flip any new edge that connects an old and new vertex.
+    
+    // Finally, copy new vertex positions into the Vertex::pos.
 }
 
 /*
@@ -439,7 +426,7 @@ bool Halfedge_Mesh::isotropic_remesh() {
     // -> Finally, apply some tangential smoothing to the vertex positions
 
     // Note: if you erase elements in a local operation, they will not be actually deleted
-    // until do_erase or validate are called. This is to facilitate checking
+    // until do_erase or validate is called. This is to facilitate checking
     // for dangling references to elements that will be erased.
     // The rest of the codebase will automatically call validate() after each op,
     // but here simply calling collapse_edge() will not erase the elements.
