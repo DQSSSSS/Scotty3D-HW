@@ -27,7 +27,6 @@ void BVH<Primitive>::build(std::vector<Primitive>&& prims, size_t max_leaf_size)
     // to create a new node, don't allocate one yourself - use BVH::new_node, which
     // returns the index of a newly added node.
 
-    assert(false);
     // Keep these
     nodes.clear();
     primitives = std::move(prims);
