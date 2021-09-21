@@ -39,10 +39,11 @@ The easiest (but not recommended) way is to download a zip from GitHub and make 
 5. Congratulations! you have successfully _mirrored_ a git repository with all past commits intact. 
 
 Now, let's see why this setup may be useful: say we start doing an assignment and commit regularly to our private repo (our `origin`). Then the 15-462 staff push some new changes to the Scotty3D skeleton code that we want to pull in. But, we don't want to mess up the changes we've added to our private copy. Here's where git comes to the rescue:
-    - First commit all current changes to your `origin`
-    - Run `git pull sourcerepo master` - this pulls all the changes from `sourcerepo` into your local folder
-    - If there are files that differ in your `origin` and in the `sourcerepo`, git will attempt to automatically merge the changes. Git may create a "merge" commit for this.
-    - Unfortunately, there may be merge conflicts. Git will handle as many merges as it can, then then tell you which files have conflicts that need manual resolution. You can resolve the conflicts in your text editor and create a new commit to complete the `merge` process.
-    - After you have completed the merge, you now have all the updates locally. Push to your private origin to publish changes there too:
-        - `git push origin main`
+
+1. Commit all local changes to your `origin`.
+2. Run `git pull sourcerepo master` - this pulls all the changes from `sourcerepo` into your local copy.
+    - If there are files with changes in both `origin` and `sourcerepo`, git will attempt to automatically merge the updates. Git may create a "merge" commit for this.
+    - Unfortunately, there may be conflicts. Git will handle as many merges as it can, then then tell you which files have conflicts that need manual resolution. You can resolve the conflicts in your text editor and create a new commit to complete the `merge` process.
+3. After you have completed the merge, you now have all the updates locally. Push to your private origin to publish changes there too:
+    - `git push origin main`
 
