@@ -39,17 +39,17 @@ Notice that only blue (and not black) edges are flipped in this procedure; as de
 When working with dynamic mesh data structures (like a halfedge mesh), one must think **very carefully** about the order in which mesh elements are processed---it is quite easy to delete an element at one point in the code, then try to access it later (typically resulting in a crash!). For instance, suppose we write a loop like this:
 
     // iterate over all edges in the mesh
-    for (EdgeRef e = mesh.edges_begin(); e != mesh.edges_end(); e++) {
+    for (EdgeRef e = edges_begin(); e != edges_end(); e++) {
       if (some condition is met) {
-        mesh.split_edge(e);
+        split_edge(e);
       }
     }
 
 Although this routine looks straightforward, it can very easily crash! The reason is fairly subtle: we are iterating over edges in the mesh by incrementing the iterator `e` (via the expression `e++`). But since `split_edge()` is allowed to create and delete mesh elements, it might deallocate the edge pointed to by `e` before we increment it! To be safe, one should instead write a loop like this:
 
     // iterate over all edges in the mesh
-    int n = mesh.n_edges();
-    EdgeRef e = mesh.edges_begin();
+    int n = n_edges();
+    EdgeRef e = edges_begin();
     for (int i = 0; i < n; i++) {
 
       // get the next edge NOW!
@@ -58,7 +58,7 @@ Although this routine looks straightforward, it can very easily crash! The reaso
 
       // now, even if splitting the edge deletes it...
       if (some condition is met) {
-        mesh.split_edge(e);
+        split_edge(e);
       }
 
       // ...we still have a valid reference to the next edge.

@@ -18,7 +18,7 @@ The basic idea behind the halfedge data structure is that, in addition to the us
 
 <center><img src="halfedge_pointers.png" style="height:240px"></center>
 
-In particular, there are two halfedges associated with each edge (see picture above). For an edge connecting two vertices i and j, one of its halfedges points from i to j; the other one points from j to i. In other words, we say that the two halfedges are _oppositely oriented_. On of the halfedges is associated with the face to the "left" of the edge; the other is associated with the face to the "right." Each halfedge knows about the opposite halfedge, which we call its _twin_. It also knows about the _next_ halfedge around its face, as well as its associated edge, face, and vertex.
+In particular, there are two halfedges associated with each edge (see picture above). For an edge connecting two vertices i and j, one of its halfedges points from i to j; the other one points from j to i. In other words, we say that the two halfedges are _oppositely oriented_. One of the halfedges is associated with the face to the "left" of the edge; the other is associated with the face to the "right." Each halfedge knows about the opposite halfedge, which we call its _twin_. It also knows about the _next_ halfedge around its face, as well as its associated edge, face, and vertex.
 
 In contrast, the standard mesh elements (vertices, edges, and faces) know only about _one_ of their halfedges. In particular:
 
@@ -72,17 +72,17 @@ Notice that we refer to a face as a `FaceRef` rather than just a `Face`. You can
 
 To iterate over **all** the vertices in a halfedge mesh, we could write a loop like this:
 
-    for(VertexRef v = mesh.vertices_begin(); v != mesh.vertices_end(); v++) {
+    for(VertexRef v = vertices_begin(); v != vertices_end(); v++) {
       printNeighborPositions(v); // do something interesting here
     }
 
 Internally, the lists of vertices, edges, faces, and halfedges are stored as **linked lists**, which allows us to easily add or delete elements to our mesh. For instance, to add a new vertex we can write
 
-    VertexRef v = mesh.new_vertex();
+    VertexRef v = new_vertex();
 
 Likewise, to delete a vertex we can write
 
-    mesh.erase(v);
+    erase(v);
 
 Note, however, that one should be **very, very careful** when adding or deleting mesh elements. New mesh elements must be properly linked to the mesh -- for instance, this new vertex must be pointed to one of its associated halfedges by writing something like
 
@@ -90,20 +90,16 @@ Note, however, that one should be **very, very careful** when adding or deleting
 
 Likewise, if we delete a mesh element, we must be certain that no existing elements still point to it; the halfedge data structure does not take care of these relationships for you automatically. In fact, that is exactly the point of this assignment: to get some practice directly manipulating the halfedge data structure. Being able to perform these low-level manipulations will enable you to write useful and interesting mesh code far beyond the basic operations in this assignment. The `Halfedge_Mesh` class provides a helper function called `validate` that checks whether the mesh iterators are valid. You might find it worthwhile calling this function to debug your implementation (please note that `validate` only checks that your mesh is valid - passing it does not imply that your specific operation is correct).
 
-Finally, the **boundary** of the surface (e.g., the ankles and waist of a pair of pants) requires special care in our halfedge implementation. At first glance, it would seem that the routine `printNeighborPositions()` above might break if the vertex `v` is on the boundary, because at some point we worry that we have no `twin()` element to visit. Fortunately, our implementation has been designed to avoid this kind of catastrophe. In particular, rather than having an actual hole in the mesh, we create a "virtual" boundary face whose edges are all the edges of the boundary loop. This way, we can iterate over boundary elements just like any other mesh element. If we ever need to check whether an element is on the boundary, we have the methods.
+Finally, the **boundary** of the surface (e.g., the ankles and waist of a pair of pants) requires special care in our halfedge implementation. At first glance, it would seem that the routine `printNeighborPositions()` above might break if the vertex `v` is on the boundary, because at some point we worry that we have no `twin()` element to visit. Fortunately, our implementation has been designed to avoid this kind of catastrophe. In particular, rather than having an actual hole in the mesh, we create a "virtual" boundary face whose edges are all the edges of the boundary loop. This way, we can iterate over boundary elements just like any other mesh element. If we need to check whether an element is on the boundary, we can use the following methods:
 
     Vertex::on_boundary()
     Edge::on_boundary()
     Face::is_boundary()
     Halfedge::is_boundary()
 
-These methods return true if and only if the element is contained in the domain boundary. Additionally, we store an explicit list of boundary faces, which we can iterate over like any other type of mesh element:
+These methods return true if and only if the element is associated with a boundary face. Boundary faces are stored in the usual face list, i.e., they will show up when iterating over faces. You can disambiguate faces and boundaries using the above tests.
 
-    for(FaceRef b = mesh.boundaries_begin(); b != mesh.boundaries_end(); b++) {
-      // do something interesting with this boundary loop
-    }
-
-These virtual faces are not stored in the usual face list, i.e., they will not show up when iterating over faces. The figure below should help to further explain the behavior of `Halfedge_Mesh` for surfaces with boundary:
+The figure below should help to further explain the behavior of `Halfedge_Mesh` for surfaces with boundary:
 
 <center><img src="boundary_conventions.png" style="height:360px"></center>
 

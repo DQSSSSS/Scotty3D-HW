@@ -57,9 +57,9 @@ Once you've drawn your diagram, simply collect all the elements from the "before
 
 If your edge operation requires new elements, now is the time to allocate them. For the edge flip, we don't need any new elements; but suppose that for some reason we needed a new vertex v4\. At this point we would allocate the new vertex via
 
-    VertexRef v4 = mesh.new_vertex();
+    VertexRef v4 = new_vertex();
 
-(The name used for this new vertex should correspond to the label you give it in your "after" picture.) Likewise, new edges, halfedges, and faces can be allocated via the methods `mesh.new_edge()`, `mesh.new_halfedge()`, and `mesh.new_face()`.
+(The name used for this new vertex should correspond to the label you give it in your "after" picture.) Likewise, new edges, halfedges, and faces can be allocated via the methods `new_edge()`, `new_halfedge()`, and `new_face()`.
 
 ### PHASE III: Reassign Elements
 
@@ -101,7 +101,7 @@ Next, update the pointers for all the mesh elements that are affected by the edg
 
 If your edge operation eliminates elements, now is the best time to deallocate them: at this point, you can be sure that they are no longer needed. For instance, since we do not need the vertex allocated in PHASE II, we could write
 
-    mesh.erase(v4);
+    erase(v4);
 
 You should be careful that this mesh element is not referenced by any other element in the mesh. But if your "before" and "after" diagrams are correct, that should not be an issue!
 
