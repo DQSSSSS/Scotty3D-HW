@@ -36,10 +36,11 @@ static bool is_gl45 = false;
 static bool is_gl41 = false;
 
 void setup() {
-    std::string ver = version();
-    is_gl45 = ver.find("4.5") != std::string::npos;
-    is_gl41 = ver.find("4.1") != std::string::npos;
-
+    GLint major, minor; 
+    glGetIntegerv(GL_MAJOR_VERSION, &major); 
+    glGetIntegerv(GL_MINOR_VERSION, &minor); 
+    is_gl45 = major == 4 && minor == 5;
+    is_gl41 = major == 4 && minor == 1;
     setup_debug_proc();
     Effects::init();
 }
