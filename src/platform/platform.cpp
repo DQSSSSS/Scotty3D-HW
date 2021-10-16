@@ -73,29 +73,27 @@ void Platform::platform_init() {
         die("Failed to create window: %s", SDL_GetError());
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
-    gl_context = SDL_GL_CreateContext(window);
-    if(!gl_context) {
-        info("Failed to create OpenGL 4.5 context, trying 4.1 (%s)", SDL_GetError());
-
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+    auto context = [&](int major, int minor) {
+        if(gl_context) return;
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor);
         gl_context = SDL_GL_CreateContext(window);
-        if(!gl_context) {
-            warn("Failed to create OpenGL 4.1 context, trying 3.3 (%s)", SDL_GetError());
+    };
 
-            SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-            SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-            gl_context = SDL_GL_CreateContext(window);
-            if(!gl_context) {
-                die("Failed to create Opengl 3.3 context: %s", SDL_GetError());
-            }
-        }
-    }
+#ifndef __APPLE__ // >:|
+    context(4,5);
+    if(!gl_context) info("Failed to create OpenGL 4.5 context, trying 4.1 (%s)", SDL_GetError());
+#endif 
+    context(4,1);
+    if(!gl_context) warn("Failed to create OpenGL 4.1 context, trying 3.3 (%s)", SDL_GetError());
+    context(3,3);
+    if(!gl_context) die("Failed to create OpenGL 3.3 context, shutting down (%s)", SDL_GetError());
 
     SDL_GL_MakeCurrent(window, gl_context);
-    if(SDL_GL_SetSwapInterval(-1)) SDL_GL_SetSwapInterval(1);
+    if(SDL_GL_SetSwapInterval(-1)) {
+        info("Could not enable vsync with late swap; using normal vsync.");
+        SDL_GL_SetSwapInterval(1);
+    }
 
     if(!gladLoadGL()) {
         die("Failed to load OpenGL functions.");
