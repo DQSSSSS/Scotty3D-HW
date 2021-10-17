@@ -375,6 +375,9 @@ std::optional<std::pair<Halfedge_Mesh::ElementRef, std::string>> Halfedge_Mesh::
         if(!finite) return {{v, "A vertex position was set to a non-finite value."}};
     }
 
+    std::unordered_map<VertexRef, std::set<HalfedgeRef>> v_accessible;
+    std::unordered_map<EdgeRef, std::set<HalfedgeRef>> e_accessible;
+    std::unordered_map<FaceRef, std::set<HalfedgeRef>> f_accessible;
     std::set<HalfedgeRef> permutation;
 
     // Check valid halfedge permutation
@@ -406,6 +409,69 @@ std::optional<std::pair<Halfedge_Mesh::ElementRef, std::string>> Halfedge_Mesh::
         }
     }
 
+    // Check whether each halfedge incident on a vertex points to that vertex
+    for(VertexRef v = vertices_begin(); v != vertices_end(); v++) {
+
+        if(verased.find(v) != verased.end()) continue;
+
+        HalfedgeRef h = v->halfedge();
+        if(herased.find(h) != herased.end()) {
+            return {{v, "A vertex's halfedge is erased!"}};
+        }
+
+        std::set<HalfedgeRef> accessible;
+        do {
+            accessible.insert(h);
+            if(h->vertex() != v) {
+                return {{h, "A vertex's halfedge does not point to that vertex!"}};
+            }
+            h = h->twin()->next();
+        } while(h != v->halfedge());
+        v_accessible[v] = std::move(accessible);
+    }
+
+    // Check whether each halfedge incident on an edge points to that edge
+    for(EdgeRef e = edges_begin(); e != edges_end(); e++) {
+
+        if(eerased.find(e) != eerased.end()) continue;
+
+        HalfedgeRef h = e->halfedge();
+        if(herased.find(h) != herased.end()) {
+            return {{e, "An edge's halfedge is erased!"}};
+        }
+
+        std::set<HalfedgeRef> accessible;
+        do {
+            accessible.insert(h);
+            if(h->edge() != e) {
+                return {{h, "An edge's halfedge does not point to that edge!"}};
+            }
+            h = h->twin();
+        } while(h != e->halfedge());
+        e_accessible[e] = std::move(accessible);
+    }
+
+    // Check whether each halfedge incident on a face points to that face
+    for(FaceRef f = faces_begin(); f != faces_end(); f++) {
+
+        if(ferased.find(f) != ferased.end()) continue;
+
+        HalfedgeRef h = f->halfedge();
+        if(herased.find(h) != herased.end()) {
+            return {{f, "A face's halfedge is erased!"}};
+        }
+
+        std::set<HalfedgeRef> accessible;
+        do {
+            accessible.insert(h);
+            if(h->face() != f) {
+                return {{h, "A face's halfedge does not point to that face!"}};
+            }
+            h = h->next();
+        } while(h != f->halfedge());
+        f_accessible[f] = std::move(accessible);
+    }
+
     for(HalfedgeRef h = halfedges_begin(); h != halfedges_end(); h++) {
 
         if(herased.find(h) != herased.end()) continue;
@@ -422,60 +488,17 @@ std::optional<std::pair<Halfedge_Mesh::ElementRef, std::string>> Halfedge_Mesh::
         if(h->twin()->twin() != h) {
             return {{h, "A halfedge's twin's twin is not itself!"}};
         }
-    }
 
-    // Check whether each halfedge incident on a vertex points to that vertex
-    for(VertexRef v = vertices_begin(); v != vertices_end(); v++) {
-
-        if(verased.find(v) != verased.end()) continue;
-
-        HalfedgeRef h = v->halfedge();
-        if(herased.find(h) != herased.end()) {
-            return {{v, "A vertex's halfedge is erased!"}};
+        // Check that the halfedge can be found via its vertex, edge, and face
+        if(v_accessible[h->vertex()].count(h) == 0) {
+            return {{h, "A halfedge is not accessible from its vertex!"}};
         }
-
-        do {
-            if(h->vertex() != v) {
-                return {{h, "A vertex's halfedge does not point to that vertex!"}};
-            }
-            h = h->twin()->next();
-        } while(h != v->halfedge());
-    }
-
-    // Check whether each halfedge incident on an edge points to that edge
-    for(EdgeRef e = edges_begin(); e != edges_end(); e++) {
-
-        if(eerased.find(e) != eerased.end()) continue;
-
-        HalfedgeRef h = e->halfedge();
-        if(herased.find(h) != herased.end()) {
-            return {{e, "An edge's halfedge is erased!"}};
+        if(e_accessible[h->edge()].count(h) == 0) {
+            return {{h, "A halfedge is not accessible from its edge!"}};
         }
-
-        do {
-            if(h->edge() != e) {
-                return {{h, "An edge's halfedge does not point to that edge!"}};
-            }
-            h = h->twin();
-        } while(h != e->halfedge());
-    }
-
-    // Check whether each halfedge incident on a face points to that face
-    for(FaceRef f = faces_begin(); f != faces_end(); f++) {
-
-        if(ferased.find(f) != ferased.end()) continue;
-
-        HalfedgeRef h = f->halfedge();
-        if(herased.find(h) != herased.end()) {
-            return {{f, "A face's halfedge is erased!"}};
+        if(f_accessible[h->face()].count(h) == 0) {
+            return {{h, "A halfedge is not accessible from its face!"}};
         }
-
-        do {
-            if(h->face() != f) {
-                return {{h, "A face's halfedge does not point to that face!"}};
-            }
-            h = h->next();
-        } while(h != f->halfedge());
     }
 
     do_erase();
