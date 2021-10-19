@@ -10,7 +10,7 @@ grand_parent: "A2: MeshEdit"
 
 For an in-practice example, see the [User Guide](/Scotty3D/guide/model_mode).
 
-Scotty3D also supports remeshing, an operation that keeps the number of samples roughly the same while improving the shape of individual triangles. The isotropic remeshing algorithm tries to make the mesh as "uniform" as possible, i.e., triangles as close as possible to equilateral triangles of equal size, and vertex degrees as close as possible to 6 (note: this algorithm is for **triangle meshes only**). The algorithm to be implemented is based on the paper [Botsch and Kobbelt, "A Remeshing Approach to Multiresolution Modeling"](http://graphics.uni-bielefeld.de/publications/disclaimer.php?dlurl=sgp04.pdf) (Section 4), and can be summarized in just a few simple steps:
+Scotty3D also supports remeshing, an operation that keeps the number of samples roughly the same while improving the shape of individual triangles. The isotropic remeshing algorithm tries to make the mesh as "uniform" as possible, i.e., triangles as close as possible to equilateral triangles of equal size, and vertex degrees as close as possible to 6 (note: this algorithm is for **triangle meshes only**). The algorithm to be implemented is based on the paper [Botsch and Kobbelt, "A Remeshing Approach to Multiresolution Modeling"](https://www.graphics.rwth-aachen.de/media/papers/remeshing1.pdf) (Section 4), and can be summarized in just a few simple steps:
 
 1.  If an edge is too long, split it.
 2.  If an edge is too short, collapse it.
