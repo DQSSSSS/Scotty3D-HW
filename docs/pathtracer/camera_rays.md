@@ -28,13 +28,13 @@ Implement `Camera::generate_ray`. This function should return a ray **in world s
 
 Note that the camera maintains camera-space-to-world space transform matrix `iview` that you will need to use in order to get the new ray back into **world space**.
 
-Once you have implemented `Pathtracer::trace_pixel`, `Rect::Uniform::sample` and `Camera::generate_ray`ou should now have a camera that can shoot rays into the scene! See the
+Once you have implemented `Pathtracer::trace_pixel`, `Rect::sample` and `Camera::generate_ray`ou should now have a camera that can shoot rays into the scene! See the
 **Raytracing Visualization** below to confirm this.
 
 ## Step 3: `Pathtracer::trace_pixel` &#8594; Super-sampling
 Your implementation of `Pathtracer::trace_pixel` must support super-sampling. The starter code will hence call `Pathtracer::trace_pixel` one time for each sample (number of samples specified by `Pathtracer::n_samples`, so your implementation of `Pathtracer::trace_pixel` should choose a **single** new location within the pixel each time.
 
-To choose a sample within the pixel, you should implement `Rect::Uniform::sample` (see `src/student/samplers.cpp`), such that it provides (random) uniformly distributed 2D points within the rectangular region specified by the origin and the member `Rect::Uniform::size`. Then you may then create a `Rect::Uniform` sampler with a one-by-one region and call `sample()` to obtain randomly chosen offsets within the pixel.
+To choose a sample within the pixel, you should implement `Rect::sample` (see `src/student/samplers.cpp`), such that it provides (random) uniformly distributed 2D points within the rectangular region specified by the origin and the member `Rect::size`. Then you may then create a `Rect` sampler with a one-by-one region and call `sample()` to obtain randomly chosen offsets within the pixel.
 
 ---
 
