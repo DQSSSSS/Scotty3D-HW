@@ -13,7 +13,7 @@ Spectrum Pathtracer::trace_pixel(size_t x, size_t y) {
     // Generate a ray that uniformly samples pixel (x,y) and return the incoming light.
     // The following code generates a ray at the bottom left of the pixel every time.
 
-    // Tip: Samplers::Rect::Uniform
+    // Tip: Samplers::Rect
     // Tip: log_ray is useful for debugging
 
     Vec2 xy((float)x, (float)y);
