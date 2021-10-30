@@ -26,7 +26,7 @@ Implement `Camera::generate_ray`. This function should return a ray **in world s
 
 <center><img src="images/camera_coordinate_system.png" ></center>
 
-Note that the camera maintains camera-space-to-world space transform matrix `iview` that you will need to use in order to get the new ray back into **world space**.
+Note that the camera maintains camera-space-to-world space transform matrix `iview` that you will need to use in order to get the new ray back into **world space**. Note that since `iview` is a transform matrix, it contains translation, rotation, and scale factors. Be careful in how you use it on specific objects, and take a look at `lib/mat4.h` to see what functions are available for the `Mat4` object.
 
 Once you have implemented `Pathtracer::trace_pixel`, `Rect::sample` and `Camera::generate_ray`ou should now have a camera that can shoot rays into the scene! See the
 **Raytracing Visualization** below to confirm this.
