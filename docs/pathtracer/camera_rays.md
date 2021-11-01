@@ -17,7 +17,7 @@ permalink: /pathtracer/camera_rays
 ---
 
 ## Step 1: `Pathtracer::trace_pixel`
-The job of this function is to compute the amount of energy arriving at this pixel of the image. Take a look at `Pathtracer::trace_pixel` in `student/pathtracer.cpp`.  Conveniently, we've given you a function `Pathtracer::trace_ray(r)` that provides a measurement of incoming scene radiance along the direction given by ray `r`. See `lib/ray.h` for the interface of ray.
+The job of this function is to compute the amount of energy arriving at this pixel of the image. Take a look at `Pathtracer::trace_pixel` in `student/pathtracer.cpp`.  Conveniently, we've given you a function `Pathtracer::trace(r)` that provides a measurement of incoming scene radiance along the direction given by ray `r`, split into emissive and reflected components. See `lib/ray.h` for the interface of ray.
 
 Given the width and height of the screen, and a point's _screen space_ coordinates (`size_t x, size_t y`), compute the point's _normalized_ ([0-1] x [0-1]) screen space coordinates in `Pathtracer::trace_pixel`. Pass these coordinates to the camera via `Camera::generate_ray` in `camera.cpp` (note that `Camera::generate_ray` accepts a `Vec2` object as its input argument)
 
