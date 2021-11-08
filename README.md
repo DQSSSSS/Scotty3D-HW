@@ -1,25 +1,111 @@
+# 骨骼动画
 
-# Scotty3D
+本次实验使用 CMU 的动画课作业框架 Scotty3D 实现了骨骼动画，包括非关键帧插值、正向动力学、逆向动力学、基于线性混合的蒙皮。
 
-![Ubuntu Build Status](https://github.com/CMU-Graphics/Scotty3D/workflows/Ubuntu/badge.svg) ![MacOS Build Status](https://github.com/CMU-Graphics/Scotty3D/workflows/MacOS/badge.svg) ![Windows Build Status](https://github.com/CMU-Graphics/Scotty3D/workflows/Windows/badge.svg)
+结果见 `results/`
 
-Welcome to Scotty3D! This 3D graphics software package includes components for interactive mesh
-editing, realistic path tracing, and dynamic animation. Implementing functionality in each of these areas
-constitutes the majority of the coursework for 15-462/662 (Computer Graphics) at Carnegie Mellon University
+## 算法原理
 
-Please visit the [documentation website](https://cmu-graphics.github.io/Scotty3D/).
+骨骼动画的制作，即先编辑关键帧，再使用将非关键帧插值出来。
 
-## Sampled Student Work (Fall 2020)
+制作关键帧时，需要动画师操作骨骼完成动作的编辑。在技术上，为了达成这一目的，有两个步骤：
 
-Showcase [video](https://www.youtube.com/watch?v=yJ5eY3EIImA&t=2s)!
+1. 由绑定师完成骨骼与 mesh 的绑定（bind）与蒙皮操作。
+2. 由动画师转动关节来完成动作编辑。
 
-### MeshEdit
+![img](https://dqs-blog-imgbed.oss-cn-beijing.aliyuncs.com/img/forward_kinematic_diagram.jpg)
 
-![fall 2020 meshes](docs/results/me_f20.png)
+首先看骨骼。上图中，每个长方形是一块骨骼，骨骼之间的连接处称之为关节。骨骼延伸出去的关节可以继续连接新的骨骼，由于一个关节可以连接多个骨骼，所以骨骼会形成一个树状结构。
 
-### PathTracer
+树上每个节点保存两个信息：当前骨骼相对于父节点骨骼的长度与方向（extent），当前关节的转动角度（pose）。其中 extent 用来给绑定师完成对标准动作的绑定，pose 给动画师用来转动关节。
 
-![fall 2020 path tracer 0](docs/results/pt_f20_0.jpg)
-![fall 2020 path tracer 1](docs/results/pt_f20_1.png)
-![fall 2020 path tracer 2](docs/results/pt_f20_2.png)
-![fall 2020 path tracer 3](docs/results/pt_f20_3.png)
+extent 是一个三维向量，长度代表这一块骨骼的长度，角度代表相对角度。
+
+pose 是一个三维的欧拉角，代表旋转的角度。
+
+所以，只需要在绑定时制定好 extent，之后使用 extent 和 pose 完成正向运动学和逆向运动学的解算，就可以操作骨骼了。最后使用蒙皮技术来完成骨骼带动 mesh。
+
+## 非关键帧插值
+
+动画师指定了关键帧后，非关键帧的 pose 都可以通过插值来计算得到。
+
+插值问题，即给定 $f(0)=p_0, f(1)=p_1$ ，求 $f(t), 0<t<1$ 
+
+本次实验采用 Hermite Curve 插值，其需要给定端点的值与导数值，其插值公式是
+$$
+f(t)=h_{00}(t)p_0+h_{10}(t)m_0+h_{01}(t)p_1+h_{11}(t)m_1
+$$
+其中 $p_0,p_1$ 是端点值， $m_0,m_1$ 是端点导数值。
+
+四个参数如下计算
+$$
+h_{00}(t)=2t^3-3t^2+1 \\
+h_{01}(t)=t^3-2t^2+t \\
+h_{10}(t)=-2t^3+3t^2 \\
+h_{11}(t)=t^3-t^2 \\
+$$
+
+## 正向运动学
+
+正向运动学，就是通过控制每块骨骼的参数（extent 或 pose），进行末端影响器坐标的计算。
+
+其实就是一个坐标不断变换的过程。
+
+我们有五种坐标系：
+
+1. 世界坐标系。顾名思义。骨骼树根的坐标代表了对应的物体在世界坐标系下的坐标，令其为 `base_pos`。
+2. 骨骼的绑定坐标系。以骨骼树根为原点的坐标系，只考虑 extent，不考虑 pose。
+3. 骨骼的姿态坐标系。以骨骼树根为原点的坐标系，即考虑 extent，又考虑 pose。
+4. 关节的绑定坐标系。针对于一块骨骼，以其根部关节作为原点的坐标系。只考虑 extent。
+5. 关节的姿态坐标系。针对于一块骨骼，以其根部关节作为原点的坐标系。考虑 extent 和 pose。
+
+假设我们想要求解某块骨骼的末端点在世界坐标系下的坐标，可以如下计算：
+
+1. 找到该块骨骼，通过 extent 和 pose（如果需要解姿态）得到末端在它的关节坐标系下的坐标。
+2. 在骨骼树中寻找父节点，如果有父节点，进入第 3 步，否则跳到第 4 步。
+3. 通过父节点的 extent 和 pose（如果需要解姿态）进行平移/旋转变换，得到在当前关节坐标系下的坐标。跳到第 2 步。
+4. 此时得到了骨骼的绑定/姿态坐标系下的坐标，利用 `base_pos` 进行平移变换计算出其在世界坐标系下的坐标，结束。
+
+所以，关节坐标系的坐标到骨骼的绑定/姿态坐标系下的坐标的变换，可以通过骨骼树上从上到下的变换矩阵连乘得到，最后再通过 `base_pos` 转换到世界坐标系。
+
+另外，如果需要求解所有关节端点的世界坐标，只需要进行 dfs 遍历即可
+
+## 逆向运动学
+
+正向运动学是通过骨骼参数计算出末端影响器的坐标，逆向运动学是通过末端影响器的坐标计算出骨骼参数。这对于控制人物动作来说非常重要。
+
+这里只考虑对于 pose 的求解，即转动角度。
+
+假设我们规定了某个关节的末端影响器的位置 $p(\theta)$ 需要达到 $q$ ，那么可以解如下优化
+$$
+\theta^*=\mathop{\arg\min}_{\theta}\frac{1}{2}(p(\theta)-q)^2
+$$
+其中 $\theta$ 代表该关节到根的所有关节的 pose 。令 $f=\frac 1 2 (p(\theta)-q)^2$ ，这是个无约束最小化问题，直接采用梯度下降法
+$$
+\theta_{t+1}=\theta_{t}-\alpha \grad f
+$$
+计算梯度
+$$
+\grad f=(p(\theta)-q)\grad p
+$$
+下面考虑末端影响器的位置 p 对与转动角度的梯度。不妨假设每个关节都是三个自由度，它可以看做是三个单自由度的关节，分别绕 x 轴、y 轴、z 轴转动。所以对于三自由度角度的梯度，就是对于三个单自由度角度的梯度之和。
+
+几何法可以发现：
+$$
+\frac{\part p}{\theta_{i,j}}=|r_j\times(p-o_i)|
+$$
+r 是转动轴的单位向量，p 是当前末端影响器的位置，o 是该关节的坐标。
+
+## 蒙皮
+
+蒙皮即让骨骼可以带动 mesh 进行运动。
+
+采用线性混合方式。对于 mesh 上每个顶点，找到所有可以控制它的骨骼所在的关节坐标系，分别计算出每个关节坐标系的权重以及按其变换的结果，进行线性混合。
+
+权重：与骨骼最近距离的倒数。
+
+按照关节坐标系进行变换，需要：找到该顶点在骨骼的绑定坐标系下的坐标，将其变换到该关节的绑定坐标系下，再将其变换到骨骼的姿态坐标系下。
+
+线性混合：通过权重进行线性累加，最后除以权重之和。
+
+另外，我们需要找到具体是哪些骨骼控制了这个点，可以通过简单的 Capsule-Radius 方法，即给每块骨骼设置一个控制半径，只有这个范围内的点才能被控制。
